@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+logs/
+*.log
+
+# Local config
+config/users.json
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Environment
+.env

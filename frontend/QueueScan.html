@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>QueueScanr Dashboard</title>
+<link rel="icon" type="image/png" href="/static/favicon.png">
+<style>
+body{background:#111;color:#eee;font-family:Arial;padding:20px;}
+#nowPlaying{font-size:28px;padding:15px;margin-bottom:20px;border-radius:10px;text-align:center;}
+th { background:#222; text-align:left; padding:6px; }
+.now-law{background:#1e3f66;}
+.now-fire{background:#7a1d1d;}
+.now-ems{background:#1f5e2a;}
+.now-other{background:#333;}
+
+.queueColumn {
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+
+    .playerRow {
+       display: flex;
+       flex-direction: column;   /* 🔥 force stacking */
+       gap: 15px;
+      }
+
+    .playerRow > div {
+        width: 100%;
+    }
+
+    .queueColumn {
+        max-width: 100%;
+    }
+
+    #nowPlaying {
+        font-size: 20px;
+        padding: 10px;
+    }
+
+    .playerLogo img {
+        height: 50px;
+    }
+}
+
+audio {
+    width: 100%;
+}
+
+button {
+    min-height: 40px;
+    min-width: 40px;
+}
+
+#queuePreview {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.playerShell {
+    padding: 10px;
+    border-radius: 10px;
+    background: #0a0f14;
+    border-radius: 16px;
+}
+
+/* NO borders, no scale */
+.playerShell.law {
+    box-shadow: 0 0 14px #4da6ff;
+}
+
+.playerShell.fire {
+    box-shadow: 0 0 14px #ff4d4d;
+}
+
+.playerShell.ems {
+    box-shadow: 0 0 14px #4dff88;
+}
+
+.playerShell.other {
+    box-shadow: 0 0 10px #888;
+}
+
+/* Optional pulse when active */
+.playerShell.active {
+    transform: scale(1.02);
+}
+
+.liveBlock {
+    display: flex;
+    flex-direction: column;
+}
+
+.liveActivityBar,
+#oscilloscope {
+    width: 100%;
+}
+
+#oscilloscope {
+    height: 60px;
+}
+.playerRowWrapper { width:100%; }
+.playerLogo img { height:80px; opacity:0.9; filter:drop-shadow(0 0 6px rgba(0,150,255,0.6)); transition:filter 0.3s ease-in-out; }
+.playBar{height:6px;margin-top:6px;border-radius:3px;opacity:0;transition:opacity 0.2s;}
+.playBar.active{opacity:1;}
+.liveBar{background:red;}
+.liveActivityBar{height:6px;margin-top:4px;border-radius:3px;background:linear-gradient(90deg,#3a7bd5,#4dff88);opacity:0.2;transition:opacity 0.2s,transform 0.2s;}
+.liveActivityBar.pulse{opacity:1;transform:scaleY(1.4);}
+.activityPanel{height:160px;overflow-y:auto;border:1px solid #333;padding:6px;font-size:13px;}
+.activitySquares{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px;}
+.square { width:10px; height:10px; border-radius:2px; display:inline-block; }
+.sq-law { background:#4da6ff !important; }
+.sq-fire { background:#ff4d4d !important; }
+.sq-ems { background:#4dff88 !important; }
+.sq-other { background:#888 !important; }
+.historyContainer{height:400px;overflow-y:auto;border:1px solid #333;position:relative;}
+.historyContainer thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #222;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.6);
+}
+table{width:100%;border-collapse:separate;}
+th{background:#222;} td{padding:6px;border-bottom:1px solid #333;}
+.tg-law td { background:#1e3f66 !important; }
+.tg-fire td { background:#7a1d1d !important; }
+.tg-ems td { background:#1f5e2a !important; }
+.tg-other td { background:#333 !important; }
+.tg-encrypted td { background:#2a2a2a !important; color:#ffcc00; border-left:4px solid red; }
+.popup { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center; }
+.popupContent { background:#222; padding:20px; width:500px; max-width:90vw; max-height:85vh; overflow-y:auto; border-radius:10px; color:#eee; box-shadow:0 0 15px #000; }
+pre { background:#111; padding:10px; border-radius:5px; }
+.smallNote{font-size:12px;opacity:0.7;}
+.toggleRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0;}
+.badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;background:#222;opacity:0.8;}
+.replay-btn {
+  background: #ffcc00;
+  color: #000;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 2px solid #b38f00;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.replay-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 8px rgba(255, 204, 0, 0.7);
+}
+.replayClicked {
+    background:#3a7bd5 !important;
+    color:white !important;
+    border:1px solid #1e5bbf !important;
+    transition: background 0.4s ease, color 0.4s ease;
+}
+.tg-replay-btn {
+  background: #ffcc00;
+  color: #000;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 2px solid #b38f00;
+}
+
+@keyframes replayPulse {
+    0%   { opacity: 1; text-shadow: 0 0 5px #ffcc00; }
+    50%  { opacity: 0.5; text-shadow: 0 0 15px #ffcc00; }
+    100% { opacity: 1; text-shadow: 0 0 5px #ffcc00; }
+}
+
+.replay-active {
+    animation: replayPulse 1.2s infinite;
+    color: #ffcc00;
+    font-weight: bold;
+}
+</style>
+<script>
+Debug=false;
+seenCalls = new Set();
+let ws = null;
+let replayLock = false;
+let replayTargetTG = null;
+
+  // ================= 🔥 TALKGROUP PRIORITY =================
+  let talkgroupPriority = {};
+
+  // Load saved priorities
+  (function loadPriorityState(){
+      try{
+          const stored = localStorage.getItem("talkgroupPriority");
+          if(stored){
+              talkgroupPriority = JSON.parse(stored);
+          }
+      }catch(e){
+          console.warn("Failed to load priority state");
+      }
+})();
+
+// Save helper
+function persistPriority(){
+    try{
+        localStorage.removeItem("talkgroupPriority");
+        localStorage.setItem("talkgroupPriority", JSON.stringify(talkgroupPriority));
+    }catch(e){
+        console.warn("Failed to save priority state");
+    }
+}
+
+function showLogin(){
+    document.getElementById("app").style.display = "none";
+    document.getElementById("loginScreen").style.display = "block";
+}
+function logout(){
+    localStorage.removeItem("token");
+
+    // optional: keep server saved
+    // localStorage.removeItem("server");
+
+    if(ws){
+        ws.close();
+    }
+
+    updateAuthUI();
+
+    document.getElementById("app").style.display = "none";
+    document.getElementById("loginScreen").style.display = "block";
+}
+
+async function login(){
+    const server = window.location.origin;
+    const username = document.getElementById("usernameInput").value.trim();
+    const password = document.getElementById("passwordInput").value.trim();
+
+    try {
+        const res = await fetch(server + "/login", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({username, password})
+        });
+
+        if(!res.ok) throw new Error("Login failed");
+
+        const data = await res.json();
+
+        localStorage.setItem("token", data.access_token);
+
+        updateAuthUI();   // ⭐ ADD THIS
+        startApp();
+
+    } catch(e){
+        document.getElementById("loginStatus").innerText = "Login failed";
+    }
+}
+function getUsernameFromToken(token){
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.sub || "Unknown";
+    } catch(e){
+        return "Unknown";
+    }
+}
+
+function updateAuthUI(){
+    const token = localStorage.getItem("token");
+
+    const userInfo = document.getElementById("userInfo");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    if(token){
+        const username = getUsernameFromToken(token);
+
+        userInfo.innerText = `👤 Logged in as: ${username}`;
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+    } else {
+        userInfo.innerText = "Not logged in";
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+    }
+}
+
+function startApp(){
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+
+    connectWebSocket();
+}
+</script>
+<script>
+//document.addEventListener("DOMContentLoaded", () => {
+//    const defaultUrl = `${window.location.protocol}//${window.location.host}`;
+//    document.getElementById("serverInput").value = defaultUrl;
+//});
+</script>
+</head>
+<body>
+<div id="loginScreen" style="max-width:400px;margin:auto;padding-top:80px;text-align:center;">
+    <h2>Scanner Login</h2>
+
+    <input id="usernameInput" placeholder="Username" 
+           style="width:100%;margin:8px 0;padding:8px;">
+
+    <input id="passwordInput" type="password" placeholder="Password" 
+           style="width:100%;margin:8px 0;padding:8px;">
+
+    <button onclick="login()" style="width:100%;padding:10px;margin-top:10px;">
+        Connect
+    </button>
+
+    <div id="loginStatus" style="margin-top:10px;color:#ff6666;"></div>
+</div>
+
+<div id="app" style="display:none;">
+
+<div id="authBar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+    
+    <div id="userInfo" style="font-size:14px;">
+        Not logged in
+    </div>
+
+    <div>
+        <button id="loginBtn" onclick="showLogin()">Login</button>
+        <button id="logoutBtn" onclick="logout()" style="display:none;">Logout</button>
+    </div>
+
+</div>
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h2>QueueScan Dashboard (Click player to enable audio)</h2>
+    <div class="playerLogo">
+        <img src="/static/favicon.png" alt="logo">
+    </div>
+    <div id="clock"></div>
+</div>
+
+<div id="nowPlaying" class="now-other">Waiting for data...</div>
+
+<div class="toggleRow">
+    <button onclick="toggleCodes(true)">📖 10-Codes</button>
+    <button onclick="toggleLockMode(this)">🔒 Filter: OFF</button>
+    <button onclick="togglePlaybackMode(this)">Queue Mode: Normal</button>
+    <button onclick="cancelReplay()" id="cancelReplayBtn" style="display:none;">
+        ⛔ Cancel Replay
+    </button>
+
+    <label class="smallNote">
+        <input type="checkbox" id="autoScrollToggle" checked>
+        Auto-scroll history
+    </label>
+    <span id="queueStatus" class="badge">Queue: Empty</span>
+    <span id="priorityMode" class="badge">Priority: Law > Fire > EMS > Other</span>
+</div>
+
+<div id="codesPopup" class="popup">
+    <div class="popupContent">
+        <h3>Kershaw County Codes</h3>
+        <h4>10-Codes</h4>
+        <pre id="tenCodes"></pre>
+        <h4>Signal Codes</h4>
+        <pre id="signalCodes"></pre>
+        <button onclick="toggleCodes(false)">Close</button>
+    </div>
+</div>
+
+<div class="playerRowWrapper">
+
+    <!-- Players stay together and never stretch -->
+<div class="playerRow">
+
+    <!-- Live Column -->
+    <div class="liveBlock">
+        <h3>Live</h3>
+        <div id="liveShell" class="playerShell">
+            <audio id="livePlayer" controls autoplay></audio>
+        </div>
+        <div id="liveBar" class="playBar liveBar"></div>
+        <div id="liveActivityBar" class="liveActivityBar"></div>
+        <canvas id="oscilloscope" height="60"></canvas>
+    </div>
+
+    <!-- Replay Column -->
+    <div>
+    </div>
+
+    <!-- ⭐ Queue Preview Column (fixed width, never expands players) ⭐ -->
+
+    <div class="queueColumn">
+        <h3>Pending Queue</h3>
+        <div id="queuePreview" class="activityPanel" style="height:160px;"></div>
+    </div>
+
+
+</div>
+
+
+
+    <!-- Visualizers stay below everything -->
+    <canvas id="waveform" width="400" height="40"></canvas>
+
+<!--
+    <div class="playerLogo">
+        <img src="/static/favicon.png" alt="logo">
+    </div>
+-->
+
+</div>
+
+
+
+<h3>Active Talkgroups</h3>
+<div class="smallNote">
+    ☑ Allow Audio (Lock Filter). Filters are saved on this browser.
+</div>
+
+<div id="activityPanel" class="activityPanel"></div>
+
+<h3>Call History</h3>
+<div class="smallNote">
+    Auto-scroll shows the newest calls; uncheck to review older traffic without it jumping.
+</div>
+<div class="historyContainer" id="historyContainer">
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Talkgroup</th>
+<th>Radio</th>
+<th>Freq</th>
+<th>Duration</th>
+<th>Replay</th>
+</tr>
+</thead>
+<tbody id="history"></tbody>
+</table>
+</div>
+
+<script>
+const livePlayer=document.getElementById("livePlayer");
+const liveBar=document.getElementById("liveBar");
+const liveActivityBar=document.getElementById("liveActivityBar");
+const logo = document.querySelector(".playerLogo img");
+const historyContainer = document.getElementById("historyContainer");
+const autoScrollToggle = document.getElementById("autoScrollToggle");
+const MAX_RECENT = 1000;
+
+
+// Queue + playback
+let callQueue = [];
+let isPlaying = false;
+let playbackMode = "normal"; // or "grouped"
+const MAX_QUEUE = 145;
+let currentFile = null;
+
+connectWebSocket();
+
+
+function togglePlaybackMode(btn) {
+    playbackMode = playbackMode === "normal" ? "grouped" : "normal";
+    btn.innerText = `Mode: ${playbackMode === "normal" ? "Normal" : "Grouped"}`;
+    updateQueueDisplay();
+}
+
+
+function cancelReplay(){
+    console.log("Replay cancelled");
+
+    replayLock = false;
+    replayTargetTG = null;
+
+    // 🔥 Remove ALL replay items
+    callQueue = callQueue.filter(f => !f._isReplay);
+
+    // 🔥 RESET PLAYBACK STATE (CRITICAL FIX)
+    isPlaying = false;
+    currentFile = null;
+
+    updateQueueDisplay();
+    renderQueuePreview();
+
+    // Stop current playback
+    livePlayer.pause();
+    livePlayer.removeAttribute("src");
+    livePlayer.load();
+
+    document.getElementById("cancelReplayBtn").style.display = "none";
+
+    // Resume queue safely
+    if(callQueue.length > 0){
+        setTimeout(() => {
+            playNextInQueue();
+        }, 100);
+    }
+}
+
+
+
+
+
+function groupQueueByTalkgroup(queue) {
+    const groups = {};
+
+    queue.forEach(file => {
+        const tg = file._tg || "unknown";
+        if (!groups[tg]) groups[tg] = [];
+        groups[tg].push(file);
+    });
+
+    // Flatten groups back into a single array
+    return Object.values(groups).flat();
+}
+
+
+// Priority map (lower number = higher priority)
+const priorityOrder = {
+    law: 6,
+    fire: 7,
+    ems: 8,
+    other: 9
+};
+
+// Lock / filter system
+let allowedTalkgroups = new Set();
+let lockEnabled = false;
+
+// Load persisted filters
+(function loadFilterState(){
+    try{
+        const stored = localStorage.getItem("allowedTalkgroups");
+        if(stored){
+            const arr = JSON.parse(stored);
+            if(Array.isArray(arr)){
+                allowedTalkgroups = new Set(arr);
+            }
+        }
+        const lock = localStorage.getItem("lockEnabled");
+        if(lock === "true"){
+            lockEnabled = true;
+        }
+    }catch(e){}
+
+})();
+
+//Waveform Block
+const audio = document.getElementById("livePlayer");
+const canvas = document.getElementById("oscilloscope");
+const ctx = canvas.getContext("2d");
+
+let audioCtx, analyser, source;
+let dataArray, bufferLength;
+
+// offscreen grid canvas
+const gridCanvas = document.createElement("canvas");
+const gridCtx = gridCanvas.getContext("2d");
+
+let lastDraw = 0;
+let oscAnimId = null;
+
+function initOscilloscope() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.85;
+
+        source = audioCtx.createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+        bufferLength = analyser.fftSize;
+        dataArray = new Uint8Array(bufferLength);
+    }
+
+    resizeOscilloscope(); // ensure sizes + grid
+    if (oscAnimId === null) {
+        oscAnimId = requestAnimationFrame(drawOscilloscope);
+    }
+}
+
+function buildGrid() {
+    gridCanvas.width = canvas.width;
+    gridCanvas.height = canvas.height;
+
+    const w = gridCanvas.width;
+    const h = gridCanvas.height;
+
+    gridCtx.clearRect(0, 0, w, h);
+    gridCtx.strokeStyle = "rgba(0,255,0,0.15)";
+    gridCtx.lineWidth = 1;
+
+    // vertical lines
+    for (let x = 0; x < w; x += 50) {
+        gridCtx.beginPath();
+        gridCtx.moveTo(x, 0);
+        gridCtx.lineTo(x, h);
+        gridCtx.stroke();
+    }
+
+    // horizontal lines
+    for (let y = 0; y < h; y += 25) {
+        gridCtx.beginPath();
+        gridCtx.moveTo(0, y);
+        gridCtx.lineTo(w, y);
+        gridCtx.stroke();
+    }
+}
+
+function drawOscilloscope(timestamp) {
+    oscAnimId = requestAnimationFrame(drawOscilloscope);
+
+    if (!analyser) return;
+
+    // throttle to ~30 FPS
+    if (timestamp - lastDraw < 33) return;
+    lastDraw = timestamp;
+
+    analyser.getByteTimeDomainData(dataArray);
+
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // draw static grid
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(gridCanvas, 0, 0);
+
+    // waveform style
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(0,255,0,0.9)";
+    ctx.shadowColor = "rgba(0,255,0,0.8)";
+    ctx.shadowBlur = 6; // lighter but still glowy
+
+    ctx.beginPath();
+
+    const sliceWidth = w / bufferLength;
+    let x = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = (v * h) / 2;
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+
+        x += sliceWidth;
+    }
+
+    ctx.stroke();
+}
+
+function resizeOscilloscope() {
+    const rect = canvas.getBoundingClientRect();
+
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+}
+/*
+function resizeOscilloscope() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    buildGrid();
+}*/
+
+window.addEventListener("resize", resizeOscilloscope);
+resizeOscilloscope();
+
+// start when audio plays
+audio.addEventListener("play", () => {
+    initOscilloscope();
+    if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+    }
+});
+
+// stop drawing when paused/ended to save CPU
+audio.addEventListener("pause", () => {
+    if (oscAnimId !== null) {
+        cancelAnimationFrame(oscAnimId);
+        oscAnimId = null;
+    }
+});
+
+audio.addEventListener("ended", () => {
+    if (oscAnimId !== null) {
+        cancelAnimationFrame(oscAnimId);
+        oscAnimId = null;
+    }
+});
+
+//End Waveform Block
+
+
+function persistFilterState(){
+    try{
+        localStorage.setItem("allowedTalkgroups", JSON.stringify(Array.from(allowedTalkgroups)));
+        localStorage.setItem("lockEnabled", lockEnabled ? "true" : "false");
+    }catch(e){}
+}
+
+
+const glowMap = {
+    law: "0 0 12px #4da6ff",
+    fire: "0 0 12px #ff4d4d",
+    ems: "0 0 12px #4dff88",
+    other: "0 0 10px red"
+};
+
+// Audio behavior
+livePlayer.onplay = () => {
+    liveBar.classList.add("active");
+    document.getElementById("liveShell").classList.add("active");
+    logo.style.filter = "drop-shadow(0 0 10px red)";
+    pulseActivityBar();
+};
+livePlayer.onpause = livePlayer.onended = () => {
+    liveBar.classList.remove("active");
+    document.getElementById("liveShell").classList.remove("active");
+    logo.style.filter = "drop-shadow(0 0 6px rgba(0,150,255,0.6))";
+};
+
+livePlayer.onended = () => {
+    liveBar.classList.remove("active");
+    isPlaying = false;
+    document.getElementById("nowPlaying").innerText = "Scanning...";
+    document.getElementById("nowPlaying").className = "now-other";
+    playNextInQueue();
+};
+
+// Stall recovery: if something pauses while queue still has items, try to resume
+livePlayer.onpause = () => {
+    if(isPlaying && callQueue.length > 0){
+        setTimeout(() => {
+            if(livePlayer.paused && !livePlayer.src){
+                playNextInQueue();
+            }
+        }, 400);
+    }
+};
+
+
+function pulseActivityBar(){
+    liveActivityBar.classList.add("pulse");
+    setTimeout(()=>liveActivityBar.classList.remove("pulse"),200);
+}
+
+function updateQueueDisplay(){
+    const el = document.getElementById("queueStatus");
+
+    // 🔥 Replay mode override
+    if(replayLock){
+        el.innerText = "Queue: REPLAY MODE";
+        return;
+    }
+
+    if(callQueue.length === 0){
+        el.innerText = "Queue: Empty";
+    } else {
+        el.innerText = `Queue: ${callQueue.length} call${callQueue.length > 1 ? "s" : ""}`;
+    }
+}
+
+function isInQueue(fileName){
+    return callQueue.some(f => f.name === fileName);
+}
+
+function renderQueuePreview() {
+    const box = document.getElementById("queuePreview");
+    if (!box) return;
+
+    let displayQueue = [...callQueue];
+
+    if (playbackMode === "grouped") {
+        displayQueue = groupQueueByTalkgroup(displayQueue);
+    }
+
+    if (displayQueue.length === 0) {
+        box.innerHTML = "<div class='smallNote'>Queue is empty</div>";
+        return;
+    }
+
+    box.innerHTML = displayQueue.map((f, i) => {
+
+    const timeStr = f._time ? ` • ${f._time}` : "";
+
+    return `
+    <div style="
+        padding:4px 6px;
+        border-bottom:1px solid #333;
+        border-radius:4px;
+        ${getPriorityStyle(f._prio)}
+    ">
+        <b>#${i + 1}</b> — P${f._prio} <b>${f._tg}</b>
+<span style="float:right; opacity:0.7;">${f._time || ""}</span>
+        <div style="opacity:0.7; font-size:12px;">${f.name}</div>
+    </div>
+    `;
+}).join("");
+
+
+}
+
+
+// Priority-aware enqueue
+function enqueueCall(file, category){
+
+
+    // 🔒 Replay lock mode
+    if (replayLock && !file._isReplay) {
+      // Always push live traffic to the BACK during replay
+      callQueue.push(file);
+    
+      updateQueueDisplay();
+      renderQueuePreview();
+      return;
+      }
+
+    if(replayLock && file._tg !== replayTargetTG){
+       // 🔒 Still process normally — just don't preempt replay
+       // BUT DO NOT bypass dedupe or priority logic
+       file._deferred = true;   // mark as deferred (optional)
+      }
+
+
+    // Avoid duplicates
+
+    // 🔥 HARD DEDUPE (queue + current + seen)
+    if (
+        (!file._isReplay && seenCalls.has(file.name)) ||
+        isInQueue(file.name) ||
+        (currentFile && currentFile.name === file.name)
+    ){
+        return;
+    }
+
+    // Track seen calls (live only)
+    if (!file._isReplay) {
+        seenCalls.add(file.name);
+    }
+
+
+
+   // optional cleanup to prevent memory growth
+   if (seenCalls.size > 2000) {
+       const first = seenCalls.values().next().value;
+       seenCalls.delete(first);
+       }
+   
+
+    // Maintain max length
+    if(callQueue.length >= MAX_QUEUE){
+        callQueue.shift();
+    }
+
+    // Insert based on priority
+    let prio;
+
+    // 1️⃣ Replay
+    if (file._isReplay) {
+        prio = 0;
+    }
+
+    // 2️⃣ TGID override
+    else if (file._tgid !== undefined && talkgroupPriority[file._tgid] !== undefined) {
+        prio = talkgroupPriority[file._tgid];
+    }
+
+    // 3️⃣ Category fallback
+    else {
+        prio = priorityOrder[category] || 99;
+    }
+
+
+    // ✅ IMPORTANT: assign BEFORE inserting
+    file._prio = prio;
+
+    // 🔥 REPLAY ALWAYS GOES TO FRONT
+    if (file._isReplay) {
+        callQueue.unshift(file);
+    } else {
+
+        let inserted = false;
+
+        for(let i=0;i<callQueue.length;i++){
+            const existing = callQueue[i];
+            const existingPrio = existing._prio || 99;
+    
+            // 🔥 NEVER insert ahead of replay items
+            if(existing._isReplay){
+                continue;
+            }
+    
+            if(prio < existingPrio){
+                callQueue.splice(i,0,file);
+                inserted = true;
+                break;
+            }
+        }
+    
+        if(!inserted){
+            callQueue.push(file);
+        }
+    }
+
+
+
+
+    // Attach priority metadata (not strictly necessary but handy)
+    file._prio = prio;
+
+    updateQueueDisplay();
+    renderQueuePreview();
+
+    if(!isPlaying && livePlayer.paused){
+        playNextInQueue();
+    }
+}
+function getPriorityStyle(prio){
+    if(prio === 0){
+        return "background:#ffcc00; color:#000; font-weight:bold;";
+    }
+    if(prio <= 2){
+        return "background:#7a1d1d; color:#fff;";
+    }
+    if(prio <= 5){
+        return "background:#1e3f66; color:#fff;";
+    }
+    return "background:#333; color:#ccc;";
+}
+
+function showQueueMessage(msg, duration = 2000){
+    const box = document.getElementById("queuePreview");
+    if (!box) return;
+
+    box.innerHTML = `
+        <div style="color:#ffcc00; font-weight:bold; padding:6px;">
+            ${msg}
+        </div>
+    `;
+
+    // Auto clear (optional)
+    setTimeout(() => {
+        renderQueuePreview();
+    }, duration);
+}
+
+function reSortQueue(){
+    callQueue.sort((a, b) => (a._prio || 99) - (b._prio || 99));
+    updateQueueDisplay();
+    renderQueuePreview();
+}
+
+function normalizeTG(tg){
+    return (tg || "")
+        .trim()
+        .toLowerCase();
+}
+
+function playReplayFromRow(btn, file, tgid, talkgroup, category,time){
+
+    const fileObj = {
+        name: file,
+        _tg: talkgroup,
+        _tgid: tgid,
+        _category: category || "other",
+        _prio: 0,   // 🔥 replay priority
+        _isReplay: true,
+        _time: time   
+    };
+
+    // 🔥 Prevent duplicates
+    if (
+        (currentFile && currentFile.name === file) ||
+        callQueue.some(f => f.name === file) 
+    ){
+        return;
+    }
+
+
+    // inject at FRONT
+    enqueueCall(fileObj, fileObj._category);
+
+    // UI feedback
+    if(btn){
+        btn.classList.add("replayClicked");
+        setTimeout(() => btn.classList.remove("replayClicked"), 600);
+    }
+}
+
+
+function playNextInQueue(){
+
+    const server = location.origin;
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        console.error("No token - cannot play audio");
+        isPlaying = false;
+        return;
+    }
+
+    if(callQueue.length === 0){
+        isPlaying = false;
+        resetBanner(); 
+        updateQueueDisplay();
+        return;
+    }
+
+    if (playbackMode === "grouped") {
+        callQueue = groupQueueByTalkgroup(callQueue);
+    }
+
+    // 🔥 If replay lock is active, force replay-first selection
+   if (replayLock) {
+       const replayIndex = callQueue.findIndex(f => f._isReplay);
+       if (replayIndex !== -1) {
+           const nextFile = callQueue.splice(replayIndex, 1)[0];
+           callQueue.unshift(nextFile);
+       }
+   }
+
+    const nextFile = callQueue.shift();
+    updateQueueDisplay();
+    renderQueuePreview();
+
+    currentFile = nextFile;
+    isPlaying = true;
+
+    // ⭐⭐⭐ ADD THIS BLOCK ⭐⭐⭐
+    const banner = document.getElementById("nowPlaying");
+    const shell = document.getElementById("liveShell");
+
+    // Reset classes
+    shell.classList.remove("law", "fire", "ems", "other");
+
+    // Apply category (derive from priority if needed)
+    let category = nextFile._category || "other";
+
+    shell.classList.add(category);
+
+    const type = nextFile._prio === 0 ? "REPLAY" : "LIVE";
+
+    const isReplay = nextFile._isReplay === true;
+    const timeStr = nextFile._time ? ` • ${nextFile._time}` : "";
+
+    // Reset classes
+    banner.className = "now-" + category;
+
+    if(isReplay){
+        banner.innerHTML = `${nextFile._tg} • <span class="replay-active">REPLAY</span>${timeStr}`;
+    } else {
+        banner.innerText = `${nextFile._tg} • LIVE${timeStr}`;
+    }
+
+
+
+
+
+
+
+
+    // ⭐⭐⭐ END BLOCK ⭐⭐⭐
+
+    livePlayer.pause();
+    livePlayer.removeAttribute("src");
+    livePlayer.load();
+
+
+    //livePlayer.src = `${server}/call/${nextFile.name}?token=${token}&t=${Date.now()}`;
+
+    livePlayer.src = `${server}/call/${nextFile.name}?token=${encodeURIComponent(token)}&t=${Date.now()}`;
+
+
+
+    livePlayer.play().then(()=>{
+       pulseActivityBar();
+      }).catch(err => {
+
+       // 🔥 Ignore expected AbortError (cancel/interrupt)
+       if (err.name === "AbortError") {
+           console.log("Play interrupted (expected during cancel)");
+           return;
+       }
+
+       console.error("PLAY FAILED", err);
+   
+       isPlaying = false;
+
+       // try next item safely
+       setTimeout(() => playNextInQueue(), 50);
+      });
+
+
+
+   // 🔥 CHECK IF REPLAY HAS FINISHED
+      const hasReplayItems = callQueue.some(f => f._isReplay);
+      const isCurrentReplay = currentFile && currentFile._isReplay;
+
+      if(replayLock && callQueue.every(f => !f._isReplay) && !currentFile?._isReplay){
+          console.log("✅ Replay complete — returning to live");
+
+          replayLock = false;
+          replayTargetTG = null;
+          resetBanner();
+          document.getElementById("cancelReplayBtn").style.display = "none";
+      }
+
+}
+
+
+
+// Lock mode
+function toggleLockMode(btn){
+    lockEnabled = !lockEnabled;
+    if(!btn){
+        btn = document.querySelector('[onclick^="toggleLockMode"]');
+    }
+    if(btn){
+        btn.innerText = `🔒 Filter: ${lockEnabled ? "ON" : "OFF"}`;
+    }
+    persistFilterState();
+}
+
+// Popup
+function toggleCodes(show){
+    document.getElementById("codesPopup").style.display = show ? "flex" : "none";
+}
+
+
+
+// Codes
+async function loadCodes() {
+    try{
+        const res = await fetch("/static/codes.json");
+        const data = await res.json();
+
+        document.getElementById("tenCodes").innerText =
+            Object.entries(data.ten_codes).map(([k,v])=>`${k} ${v}`).join("\n");
+
+        document.getElementById("signalCodes").innerText =
+            Object.entries(data.signal_codes).map(([k,v])=>`${k} ${v}`).join("\n");
+    }catch(e){
+        document.getElementById("tenCodes").innerText = "Unable to load codes.";
+        document.getElementById("signalCodes").innerText = "";
+    }
+}
+
+
+
+function resetBanner(){
+    const banner = document.getElementById("nowPlaying");
+    const shell = document.getElementById("liveShell");
+
+    banner.innerText = "Scanning...";
+    banner.className = "now-other";
+
+    // remove any category glow
+    shell.classList.remove("law", "fire", "ems", "other");
+
+    // optional: remove replay styling if present
+    banner.classList.remove("now-replay");
+}
+
+// Clock
+function updateClock(){
+    const now=new Date();
+    document.getElementById("clock").innerText =
+        now.toLocaleDateString()+" "+now.toLocaleTimeString();
+}
+
+// Close popup when clicking outside the content box
+document.getElementById("codesPopup").addEventListener("click", function(e){
+    if(e.target === this){
+        toggleCodes(false);
+    }
+});
+
+loadCodes();
+setInterval(updateClock,1000);
+updateClock();
+
+// WebSocket
+const protocol = location.protocol === "https:" ? "wss" : "ws";
+//const ws = new WebSocket(`${protocol}://${location.host}/ws`);
+
+
+const token = localStorage.getItem("token");
+
+if (!token) {
+    console.error("NO TOKEN FOUND");
+} else {
+    ws = new WebSocket(
+        `${protocol}://${location.host}/ws?token=${token}`
+    );
+}
+
+let pingInterval = null;
+
+function startPing(){
+    if(pingInterval) clearInterval(pingInterval);
+
+    pingInterval = setInterval(() => {
+        if(ws && ws.readyState === WebSocket.OPEN){
+            ws.send(JSON.stringify({type: "ping"}));
+        }
+    }, 20000); // 20 seconds
+}
+
+function stopPing(){
+    if(pingInterval){
+        clearInterval(pingInterval);
+        pingInterval = null;
+    }
+}
+
+
+
+function replayTalkgroup(tgid,tg){
+    replayLock = true;
+    replayTargetTG = tg;
+
+    document.getElementById("cancelReplayBtn").style.display = "inline-block";
+
+    const rows = Array.from(document.querySelectorAll("#history tr"));
+    const replayQueue = [];
+
+    rows.forEach(row => {
+        const tgCell = row.children[1]?.innerText || "";
+        const timeCell = row.children[0]?.innerText || "";
+        const btn = row.querySelector("button");
+        const rowTGID = parseInt(row.getAttribute("data-tgid"), 10);
+        const targetTGID = parseInt(tgid, 10);
+
+        if(Debug) console.log("ROW TGID:", rowTGID, "TARGET:", targetTGID);
+        if(rowTGID === targetTGID && btn){
+            const onclick = btn.getAttribute("onclick");
+            const match = onclick.match(/'(.+?)'/);
+
+            if(match){
+                const file = match[1];
+
+
+                replayQueue.push({
+                    name: file,
+                    _tg: tg,
+                    _tgid: tgid,
+                    _category: "other",
+                    _prio: 0,
+                    _isReplay: true,
+                    _time: timeCell
+                });
+            }
+        }
+    });
+
+    if(replayQueue.length === 0){
+       console.warn("No calls for TG:", tg);
+
+       showQueueMessage(`⚠ No calls found for ${tg}`);
+
+       // Reset replay state (important!)
+       replayLock = false;
+       replayTargetTG = null;
+       document.getElementById("cancelReplayBtn").style.display = "none";
+
+       return;
+      }
+
+    replayQueue.reverse();
+
+    replayQueue.forEach(f => {
+       enqueueCall(f, f._category);
+       });
+   
+    updateQueueDisplay();
+    renderQueuePreview();
+
+    if(!isPlaying){
+        playNextInQueue();
+    }
+}
+
+
+
+
+
+function connectWebSocket(){
+    const token = localStorage.getItem("token");
+    const server = location.origin;
+
+    if (!token || !server){
+        console.error("Missing token/server");
+        return;
+    }
+
+
+    const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${wsProtocol}://${location.host}/ws?token=${encodeURIComponent(token)}`);
+
+    ws.onopen = () => console.log("WS CONNECTED");
+    ws.onopen = () => {
+        console.log("WS CONNECTED");
+        startPing();
+        };
+
+    ws.onmessage = function(event){
+        const msg = JSON.parse(event.data);
+
+
+
+        // 🔥 move your existing ws.onmessage logic HERE
+    if(msg.type === "full_update"){
+        const data = msg.metadata;
+        const banner = document.getElementById("nowPlaying");
+        const shell = document.getElementById("liveShell");
+
+        // Remove old category classes
+        shell.classList.remove("law", "fire", "ems", "other");
+
+        // Add new one
+        shell.classList.add(data.category || "other");
+
+        // Glow
+        logo.style.filter = `drop-shadow(${glowMap[data.category] || glowMap.other})`;
+
+        // Encrypted
+        if(data.encrypted){
+            banner.innerText = "🔒 ENCRYPTED CALL";
+            banner.className = "now-other";
+        } else {
+            //banner.innerText = `${data.talkgroup} (Radio ${data.radio})`;
+            //banner.className = "now-" + data.category;
+
+            // Filter logic: when lock is ON, only allowedTalkgroups pass
+            const isAllowed =
+                  !lockEnabled ||
+                  allowedTalkgroups.has(data.talkgroup);
+
+            if(isAllowed){
+                data.file._tg = data.talkgroup;
+//                enqueueCall(data.file, data.category || "other");
+                const fileObj = { 
+                           name: data.file,
+                           _tg: data.talkgroup,
+                           _tgid: data.tgid,
+                           _prio: priorityOrder[data.category] || priorityOrder.other,
+                           _time: data.time 
+                       };
+
+                       enqueueCall(fileObj, data.category || "other");
+            }
+        }
+
+        // HISTORY (append, respect auto-scroll)
+        const tbody=document.getElementById("history");
+
+        // Clear and rebuild OR incremental?
+        // For now, rebuild from msg.history to stay compatible with backend.
+        const shouldAutoScroll = autoScrollToggle.checked;
+        const atBottom = Math.abs(historyContainer.scrollHeight - historyContainer.scrollTop - historyContainer.clientHeight) < 5;
+
+        tbody.innerHTML="";
+
+        msg.history.forEach(row=>{
+           const tr=document.createElement("tr");
+
+           // (optional but recommended)
+           tr.setAttribute("data-tgid", row.tgid);
+
+           tr.className="tg-"+row.category+(row.encrypted?" tg-encrypted":"");
+
+           const duration = row.encrypted
+               ? "🔒"
+               : (row.duration ? row.duration.toFixed(1) + "s" : "-");
+
+           let durationClass = "";
+           if(row.duration > 10){
+               durationClass = "style='color:#ff4d4d; font-weight:bold;'";
+           }
+
+           // ✅ ONLY ONE innerHTML block
+           tr.innerHTML = `
+             <td>${row.time}</td>
+             <td>${row.talkgroup} ${row.encrypted ? "🔒" : ""}</td>
+             <td>${row.radio}</td>
+             <td>${row.frequency ? row.frequency : "-"}</td>
+             <td ${durationClass}>${duration}</td>
+             <td>${
+                 row.encrypted
+                     ? "🔒"
+                     : `<button onclick="playReplayFromRow(this, '${row.file}','${row.tgid}', '${row.talkgroup}', '${row.category}', '${row.time}')">▶</button>`
+             }</td>
+         `;
+
+           tbody.appendChild(tr);
+       });
+
+        if(shouldAutoScroll && atBottom){
+            historyContainer.scrollTop = historyContainer.scrollHeight;
+        }
+
+        // ACTIVITY (with checkboxes, persisted state)
+        const panel=document.getElementById("activityPanel");
+        panel.innerHTML="";
+
+        Object.entries(msg.activity).forEach(([tg,obj])=>{
+            const tgid = obj.tgid;
+            if(Debug)console.log("ACTIVITY TGID:", obj.tgid, "TG:", tg);
+            if(Debug)console.log("ACTIVITY ENTRY:", tg, obj);
+            const rowDiv=document.createElement("div");
+
+            const label=document.createElement("div");
+
+            const checkbox=document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = allowedTalkgroups.has(tg);
+
+            checkbox.onchange = () => {
+                if(checkbox.checked){
+                    allowedTalkgroups.add(tg);
+                } else {
+                    allowedTalkgroups.delete(tg);
+                }
+                persistFilterState();
+            };
+
+            label.appendChild(checkbox);
+
+            const replayBtn = document.createElement("button");
+            replayBtn.innerText = "▶ TG";
+            replayBtn.className = "tg-replay-btn";
+            replayBtn.style.marginLeft = "8px";
+            replayBtn.onclick = () => replayTalkgroup(tgid,tg);
+            label.appendChild(replayBtn);
+
+            const text=document.createElement("span");
+            text.innerText = ` ${tg} (${obj.count})`;
+            label.appendChild(text);
+
+
+
+
+            // 🔥 Priority dropdown
+            const prioritySelect = document.createElement("select");
+            
+            // Auto option
+            const autoOpt = document.createElement("option");
+            autoOpt.value = "";
+            autoOpt.text = "Priority Auto";
+            prioritySelect.appendChild(autoOpt);
+
+            // P1–P5
+            for(let i=1;i<=10;i++){
+                const opt = document.createElement("option");
+                opt.value = i;
+                opt.text = "P" + i;
+                prioritySelect.appendChild(opt);
+            }
+
+            // Set current value
+            prioritySelect.value = talkgroupPriority[tgid] ?? "";
+
+            // Change handler
+
+             prioritySelect.onchange = () => {
+                 if(prioritySelect.value === ""){
+                     delete talkgroupPriority[tgid];
+                 } else {
+                     talkgroupPriority[tgid] = parseInt(prioritySelect.value, 10);
+                 }
+                persistPriority();
+                reSortQueue();  // 🔥 instant effect
+                };
+
+            prioritySelect.style.marginLeft = "10px";
+
+            label.appendChild(prioritySelect);
+
+            const squares=document.createElement("div");
+            squares.className="activitySquares";
+
+            for(let i=0;i<Math.min(obj.count,50);i++){
+                const sq=document.createElement("div");
+                sq.className="square sq-"+obj.category;
+                squares.appendChild(sq);
+            }
+
+            rowDiv.appendChild(label);
+            rowDiv.appendChild(squares);
+            panel.appendChild(rowDiv);
+        });
+
+        // After activity rebuild, re-apply lock button label from state
+        const lockBtn = document.querySelector('[onclick^="toggleLockMode"]');
+        if(lockBtn){
+            lockBtn.innerText = `🔒 Filter: ${lockEnabled ? "ON" : "OFF"}`;
+        }
+    }
+    };
+
+
+    ws.onerror = (e) => {
+       console.log("WS ERROR", e);
+       stopPing();
+       };
+
+    ws.onclose = () => {
+        console.log("WS CLOSED - reconnecting...");
+        stopPing();
+        setTimeout(connectWebSocket, 2000);
+    };
+}
+window.onload = async () => {
+    const token = localStorage.getItem("token");
+
+    if(token){
+        try {
+            const res = await fetch(
+                `/verify?token=${encodeURIComponent(token)}`
+            );
+
+            if(!res.ok) throw new Error("Invalid token");
+
+            const data = await res.json();
+
+            console.log("Token valid for:", data.user);
+
+            updateAuthUI();
+            startApp();
+
+        } catch(e){
+            console.warn("Token invalid, forcing login");
+
+            localStorage.removeItem("token");
+            updateAuthUI();
+
+            document.getElementById("loginScreen").style.display = "block";
+            document.getElementById("app").style.display = "none";
+        }
+
+    } else {
+        updateAuthUI();
+        document.getElementById("loginScreen").style.display = "block";
+        document.getElementById("app").style.display = "none";
+    }
+};
+
+
+let audioUnlocked = false;
+
+function unlockAudio() {
+    if (audioUnlocked) return;
+
+    const player = document.getElementById("livePlayer");
+
+    player.play().then(() => {
+        player.pause(); // unlock only
+        audioUnlocked = true;
+        console.log("Audio unlocked");
+    }).catch(err => {
+        console.log("Unlock failed", err);
+    });
+}
+
+// Trigger on ANY interaction
+/*
+["click", "touchstart", "keydown"].forEach(evt => {
+    document.addEventListener(evt, unlockAudio, { once: true });
+});
+*/
+
+</script>
+</div>
+</body>
+</html>
