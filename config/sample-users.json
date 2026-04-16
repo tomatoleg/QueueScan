@@ -1,0 +1,8 @@
+
+{
+  "users": {
+    "guest": "password",
+    "homer": "password",
+    "john": "morilla"
+  }
+}
