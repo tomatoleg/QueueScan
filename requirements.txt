@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+python-jose
+pyyaml
+mutagen
+inotify-simple
