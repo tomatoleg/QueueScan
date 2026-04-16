@@ -8,6 +8,7 @@ backups
 config/config.yaml
 config/config.json
 config/users.json
+config/talkgroups.json
 
 # Logs
 logs/

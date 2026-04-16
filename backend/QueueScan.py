@@ -55,22 +55,6 @@ SESSION_TIMEOUT = CONFIG["session"]["timeout"]
 MAX_HISTORY = CONFIG["limits"]["max_history"]
 MAX_ACTIVE = CONFIG["limits"]["max_active"]
 
-#APP_NAME = "QueueScan"
-#APP_VERSION = "0.1.0"
-#LAN_PREFIX = "192.168.1."
-#SESSION_TIMEOUT = 3600
-#MAX_HISTORY = 250
-#MAX_ACTIVE = 50
-#SECRET_KEY = "IEYFORT"
-#ALGORITHM = "HS256"
-#TOKEN_EXPIRE_HOURS = 24
-
-#RECORD_DIR = Path("/home/trey/SDRTrunk/recordings")
-#TG_FILE = Path(__file__).parent.parent / "config/talkgroups.json"
-#USER_FILE = Path(__file__).parent.parent / "config/users.json"
-#HTML_FILE = Path(__file__).parent.parent / "frontend/QueueScan.html"
-#LOG_FILE = Path(__file__).parent.parent / "logs/login.log"
-#STATIC_DIR = Path(__file__).parent.parent / "static"
 
 # ============================================================
 # GLOBAL STATE
