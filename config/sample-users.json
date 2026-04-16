@@ -3,6 +3,6 @@
   "users": {
     "guest": "password",
     "homer": "password",
-    "john": "morilla"
+    "john": "password"
   }
 }
