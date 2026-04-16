@@ -14,6 +14,7 @@ from fastapi.responses import HTMLResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import yaml
 import uvicorn
 from mutagen.mp3 import MP3
 from inotify_simple import INotify, flags
@@ -21,26 +22,63 @@ from inotify_simple import INotify, flags
 # ============================================================
 # CONFIGURATION & PATHS
 # ============================================================
-LAN_PREFIX = "192.168.1."
-SESSION_TIMEOUT = 3600
-MAX_HISTORY = 250
-MAX_ACTIVE = 50
-SECRET_KEY = "IEYFORT"
-ALGORITHM = "HS256"
-TOKEN_EXPIRE_HOURS = 24
 
-RECORD_DIR = Path("/home/trey/SDRTrunk/recordings")
-TG_FILE = Path(__file__).parent.parent / "config/talkgroups.json"
-USER_FILE = Path(__file__).parent.parent / "config/users.json"
-HTML_FILE = Path(__file__).parent.parent / "frontend/QueueScan.html"
-LOG_FILE = Path(__file__).parent.parent / "logs/login.log"
+BASE_DIR = Path(__file__).parent.parent
+CONFIG_FILE = BASE_DIR / "config/config.yaml"
+
+if not CONFIG_FILE.exists():
+    raise RuntimeError("Missing config/config.yaml")
+
+with open(CONFIG_FILE) as f:
+    CONFIG = yaml.safe_load(f)
+
+
+# ============================================================
+# CONFIGURATION (from YAML)
+# ============================================================
+
+SECRET_KEY = CONFIG["auth"]["secret_key"]
+TOKEN_EXPIRE_HOURS = CONFIG["auth"]["token_expire_hours"]
+ALGORITHM = CONFIG["server"]["algorithm"]
+
+RECORD_DIR = Path(CONFIG["paths"]["recordings"])
+
+TG_FILE = BASE_DIR / CONFIG["paths"]["talkgroups"]
+USER_FILE = BASE_DIR / CONFIG["paths"]["users"]
+HTML_FILE = BASE_DIR / CONFIG["paths"]["html"]
+LOG_FILE = BASE_DIR / CONFIG["paths"]["logs"]
+STATIC_DIR = BASE_DIR / CONFIG["paths"]["static"]
+APP_NAME = CONFIG.get("app", {}).get("name", "QueueScan")
+APP_VERSION = CONFIG["app"]["version"]
+LAN_PREFIX = CONFIG["network"]["lan_prefix"]
+SESSION_TIMEOUT = CONFIG["session"]["timeout"]
+MAX_HISTORY = CONFIG["limits"]["max_history"]
+MAX_ACTIVE = CONFIG["limits"]["max_active"]
+
+#APP_NAME = "QueueScan"
+#APP_VERSION = "0.1.0"
+#LAN_PREFIX = "192.168.1."
+#SESSION_TIMEOUT = 3600
+#MAX_HISTORY = 250
+#MAX_ACTIVE = 50
+#SECRET_KEY = "IEYFORT"
+#ALGORITHM = "HS256"
+#TOKEN_EXPIRE_HOURS = 24
+
+#RECORD_DIR = Path("/home/trey/SDRTrunk/recordings")
+#TG_FILE = Path(__file__).parent.parent / "config/talkgroups.json"
+#USER_FILE = Path(__file__).parent.parent / "config/users.json"
+#HTML_FILE = Path(__file__).parent.parent / "frontend/QueueScan.html"
+#LOG_FILE = Path(__file__).parent.parent / "logs/login.log"
+#STATIC_DIR = Path(__file__).parent.parent / "static"
+
 # ============================================================
 # GLOBAL STATE
 # ============================================================
 clients = []
 users = {}
 history = []
-replay_buffer = deque(maxlen=20)
+replay_buffer = deque(maxlen=200)
 activity_counter = defaultdict(int)
 activity_meta = {}
 TG_MAP = {}
@@ -111,7 +149,8 @@ async def watch_recordings():
                     tg = info["talkgroup_name"]
                     activity_counter[tg] += 1
                     activity_meta[tg] = {"category": info["category"], "last_seen": info["time"], "tgid": info["tgid"]}
-                    if not info["encrypted"]: replay_buffer.append(info["file"])
+#                   if not info["encrypted"]: replay_buffer.append(info["file"])
+                    if not info["encrypted"]: replay_buffer.append(info)
                     if len(history) > MAX_HISTORY: history.pop()
                     await broadcast({"type": "full_update", "metadata": info, "history": history[:MAX_HISTORY], 
                                      "activity": {tg: {"count": c, **activity_meta.get(tg, {})} 
@@ -180,7 +219,7 @@ async def lifespan(app: FastAPI):
     watcher_task.cancel()
 
 app = FastAPI(lifespan=lifespan)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # ============================================================
 # ROUTES (Must come AFTER app = FastAPI)
@@ -188,6 +227,28 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+@app.get("/replay/{tgid}")
+def replay_talkgroup(tgid: str, limit: int = 25):
+
+    # Filter matching TGID
+    matches = [
+        call for call in replay_buffer
+        if str(call.get("tgid")) == str(tgid)
+        and not call.get("encrypted")
+    ]
+
+    # Return newest first → reverse for playback order
+    matches = matches[-limit:]
+
+    return list(matches)
+
+@app.get("/version")
+def version():
+    return {
+        "name": APP_NAME,
+        "version": APP_VERSION
+    }
 
 @app.get("/verify")
 def verify(token: str = Query(None)):

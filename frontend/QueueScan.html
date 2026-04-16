@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>QueueScanr Dashboard</title>
+<title>QueueScan Dashboard</title>
 <link rel="icon" type="image/png" href="/static/favicon.png">
 <style>
 body{background:#111;color:#eee;font-family:Arial;padding:20px;}
@@ -196,6 +196,17 @@ let replayTargetTG = null;
       }
 })();
 
+async function loadVersion(){
+    try{
+        const res = await fetch("/version");
+        const data = await res.json();
+
+        document.getElementById("versionInfo").innerText =
+            `${data.name} v${data.version}`;
+    }catch(e){
+        console.warn("Version load failed");
+    }
+}
 // Save helper
 function persistPriority(){
     try{
@@ -327,6 +338,7 @@ function startApp(){
 </div>
 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
     <h2>QueueScan Dashboard (Click player to enable audio)</h2>
+    <div id="versionInfo" style="font-size:12px; opacity:0.6;"></div>
     <div class="playerLogo">
         <img src="/static/favicon.png" alt="logo">
     </div>
@@ -802,6 +814,14 @@ function renderQueuePreview() {
 // Priority-aware enqueue
 function enqueueCall(file, category){
 
+    // 🔒 HARD FILTER ENFORCEMENT
+   if (
+       lockEnabled &&
+       !file._isReplay &&   // allow replay always
+       !allowedTalkgroups.has(file._tg)
+   ){
+       return; // ❌ do not enqueue
+   }
 
     // 🔒 Replay lock mode
     if (replayLock && !file._isReplay) {
@@ -990,6 +1010,12 @@ function playNextInQueue(){
 
     const server = location.origin;
     const token = localStorage.getItem("token");
+    // 🔥 FILTER QUEUE BEFORE PLAYBACK
+    if (lockEnabled) {
+        callQueue = callQueue.filter(f =>
+            f._isReplay || allowedTalkgroups.has(f._tg)
+        );
+    }
 
     if (!token) {
         console.error("No token - cannot play audio");
@@ -1110,12 +1136,24 @@ function playNextInQueue(){
 // Lock mode
 function toggleLockMode(btn){
     lockEnabled = !lockEnabled;
+
+    if(lockEnabled){
+        // 🔥 purge disallowed items immediately
+        callQueue = callQueue.filter(f =>
+            f._isReplay || allowedTalkgroups.has(f._tg)
+        );
+    }
+
     if(!btn){
         btn = document.querySelector('[onclick^="toggleLockMode"]');
     }
+
     if(btn){
         btn.innerText = `🔒 Filter: ${lockEnabled ? "ON" : "OFF"}`;
     }
+
+    updateQueueDisplay();
+    renderQueuePreview();
     persistFilterState();
 }
 
@@ -1173,6 +1211,7 @@ document.getElementById("codesPopup").addEventListener("click", function(e){
     }
 });
 
+loadVersion();
 loadCodes();
 setInterval(updateClock,1000);
 updateClock();
@@ -1213,72 +1252,50 @@ function stopPing(){
 
 
 
-function replayTalkgroup(tgid,tg){
+
+
+async function replayTalkgroup(tgid, tg){
+
     replayLock = true;
     replayTargetTG = tg;
 
     document.getElementById("cancelReplayBtn").style.display = "inline-block";
 
-    const rows = Array.from(document.querySelectorAll("#history tr"));
-    const replayQueue = [];
+    try {
+        const res = await fetch(`/replay/${tgid}`);
+        const data = await res.json();
 
-    rows.forEach(row => {
-        const tgCell = row.children[1]?.innerText || "";
-        const timeCell = row.children[0]?.innerText || "";
-        const btn = row.querySelector("button");
-        const rowTGID = parseInt(row.getAttribute("data-tgid"), 10);
-        const targetTGID = parseInt(tgid, 10);
-
-        if(Debug) console.log("ROW TGID:", rowTGID, "TARGET:", targetTGID);
-        if(rowTGID === targetTGID && btn){
-            const onclick = btn.getAttribute("onclick");
-            const match = onclick.match(/'(.+?)'/);
-
-            if(match){
-                const file = match[1];
-
-
-                replayQueue.push({
-                    name: file,
-                    _tg: tg,
-                    _tgid: tgid,
-                    _category: "other",
-                    _prio: 0,
-                    _isReplay: true,
-                    _time: timeCell
-                });
-            }
+        if(!data.length){
+            showQueueMessage(`⚠ No calls found for ${tg}`);
+            replayLock = false;
+            replayTargetTG = null;
+            return;
         }
-    });
 
-    if(replayQueue.length === 0){
-       console.warn("No calls for TG:", tg);
+        // Oldest → newest playback order
+        data.forEach(call => {
+            enqueueCall({
+                name: call.file,
+                _tg: call.talkgroup,
+                _tgid: call.tgid,
+                _category: call.category || "other",
+                _prio: 0,
+                _isReplay: true,
+                _time: call.time
+            }, call.category || "other");
+        });
 
-       showQueueMessage(`⚠ No calls found for ${tg}`);
+        updateQueueDisplay();
+        renderQueuePreview();
 
-       // Reset replay state (important!)
-       replayLock = false;
-       replayTargetTG = null;
-       document.getElementById("cancelReplayBtn").style.display = "none";
+        if(!isPlaying){
+            playNextInQueue();
+        }
 
-       return;
-      }
-
-    replayQueue.reverse();
-
-    replayQueue.forEach(f => {
-       enqueueCall(f, f._category);
-       });
-   
-    updateQueueDisplay();
-    renderQueuePreview();
-
-    if(!isPlaying){
-        playNextInQueue();
+    } catch(e){
+        console.error("Replay failed", e);
     }
 }
-
-
 
 
 
@@ -1425,7 +1442,7 @@ function connectWebSocket(){
             label.appendChild(checkbox);
 
             const replayBtn = document.createElement("button");
-            replayBtn.innerText = "▶ TG";
+            replayBtn.innerText = "▶ Replay TG";
             replayBtn.className = "tg-replay-btn";
             replayBtn.style.marginLeft = "8px";
             replayBtn.onclick = () => replayTalkgroup(tgid,tg);
