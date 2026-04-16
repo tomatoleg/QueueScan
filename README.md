@@ -54,7 +54,7 @@ inotify-simple
 ### 1. Clone the repository
 
 ```
-git clone https://github.com/YOUR_USERNAME/QueueScan.git
+git clone https://github.com/tomatoleg/QueueScan.git
 cd QueueScan
 ```
 
@@ -81,6 +81,7 @@ Edit the config file:
 
 ```
 python -c "import secrets; print(secrets.token_hex(32))"
+or from the command line:  openssl rand -hex 32
 ```
 
 ---
