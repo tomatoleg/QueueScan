@@ -2,19 +2,23 @@
 __pycache__/
 *.pyc
 
+# Config secrets
+bkp.sh
+backups
+config/config.yaml
+config/users.json
+
 # Logs
 logs/
 *.log
 
-# Local config
-config/users.json
+# Recordings (VERY IMPORTANT)
+recordings/
 
 # OS junk
 .DS_Store
 Thumbs.db
 
-# Environment
+# Virtual env
+venv/
 .env
-
-#Backups
-backups/

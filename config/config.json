@@ -1,0 +1,27 @@
+{
+  "app": {
+    "name": "QueueScan",
+    "version": "0.1.0"
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080
+  },
+  "paths": {
+    "recordings": "/home/trey/SDRTrunk/recordings",
+    "logs": "logs/login.log",
+    "talkgroups": "config/talkgroups.json",
+    "users": "config/users.json",
+    "static": "static",
+    "html": "frontend/QueueScan.html"
+  },
+  "limits": {
+    "max_history": 250,
+    "max_active": 50,
+    "replay_buffer": 20
+  },
+  "auth": {
+    "secret_key": "CHANGE_ME",
+    "token_expire_hours": 24
+  }
+}
