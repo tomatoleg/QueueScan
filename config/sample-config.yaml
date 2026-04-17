@@ -25,6 +25,8 @@ network:
   # Allow unauthenticated access from this subnet
   # Example: 192.168.1. allows 192.168.1.x
   lan_prefix: "192.168.1."
+  require_lan_login: false
+
 
 
 session:
