@@ -33,7 +33,7 @@ SDRTrunk → MP3 Recordings → FastAPI Backend → WebSocket → Browser UI
 ## 📦 Requirements
 
 * Python 3.10+
-* SDRTrunk (recording enabled)
+* SDRTrunk (recording enabled) https://github.com/Dsheirer/sdrtrunk/releases
 * Linux (recommended)
 
 Python dependencies:

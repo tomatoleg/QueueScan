@@ -13,8 +13,8 @@ config/talkgroups.json
 config/talkgroups_sanitized.json
 
 # Logs
-logs/
-*.log
+logs/*
+!logs/.gitkeep
 
 # Recordings (VERY IMPORTANT)
 recordings/

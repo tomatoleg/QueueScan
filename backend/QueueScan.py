@@ -72,6 +72,10 @@ processed_files = set()
 # ============================================================
 # HELPERS & DATA LOADING
 # ============================================================
+def log_event(msg):
+    with open(LOG_FILE, "a") as f:
+        f.write(msg + "\n")
+
 def load_users():
     global users
     if USER_FILE.exists():
@@ -266,7 +270,9 @@ def login(data: LoginRequest, request: Request):
     ip = request.headers.get("x-forwarded-for", request.client.host)
     stored_pw = users.get(data.username)
     if not stored_pw or stored_pw != data.password:
+        log_event(f"[LOGIN FAILED] {datetime.now()} user={data.username} ip={ip}")
         raise HTTPException(status_code=401)
+    log_event(f"[LOGIN SUCCESS] {datetime.now()} user={data.username} ip={ip}")
     token = jwt.encode({"sub": data.username, "exp": datetime.utcnow() + timedelta(hours=24)}, SECRET_KEY, algorithm=ALGORITHM)
     return {"access_token": token}
 
@@ -303,6 +309,9 @@ async def auth_middleware(request: Request, call_next):
 
     # ✅ LAN auto-auth (DO THIS FIRST)
     if is_lan and not REQUIRE_LAN_LOGIN:
+        has_cookie = "token" in request.cookies
+        has_query_token = request.query_params.get("token") is not None
+
         guest_token = jwt.encode(
             {
                 "sub": "guest",
@@ -313,8 +322,11 @@ async def auth_middleware(request: Request, call_next):
         )
 
         response = await call_next(request)
-
-        if "token" not in request.cookies:
+    
+        # Only create guest session if NO auth exists
+        if not has_cookie and not has_query_token:
+            log_event(f"[GUEST LOGIN] {datetime.now()} ip={client_ip}")
+    
             response.set_cookie(
                 key="token",
                 value=guest_token,
