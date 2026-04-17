@@ -111,12 +111,58 @@ Key settings in `config.yaml`:
 
 ---
 
-## 🔒 Security Notes
+## 📡 talkgroups.json
 
-* Do NOT commit your real `config.yaml`
-* Do NOT expose your `SECRET_KEY`
-* Use `.gitignore` to protect sensitive files
+`talkgroups.json` defines how numeric talkgroup IDs (TGIDs) are translated into meaningful, structured data within QueueScan.
 
+### 🧠 Purpose
+
+SDRTrunk outputs activity using **raw talkgroup IDs only**. These IDs (e.g., `101`, `3021`) are not human-friendly and contain no inherent context.
+
+`talkgroups.json` provides a lightweight mapping layer that enriches those IDs with:
+
+- A **display name**
+- A **category** (`law`, `fire`, `ems`, `other`)
+
+---
+
+### ⚙️ How it works
+
+When a call is processed, QueueScan:
+
+1. Extracts the TGID from the recording filename  
+2. Looks up the TGID in `talkgroups.json`  
+3. Applies the mapped metadata to the call  
+
+This enriched data is then used throughout the application.
+
+---
+
+### 🎯 What it affects
+
+The data in `talkgroups.json` drives multiple parts of the system:
+
+- **UI display** — human-readable talkgroup names  
+- **Color coding** — category-based styling (law/fire/EMS/etc.)  
+- **Filtering** — talkgroup lock/filter behavior  
+- **Priority logic** — playback ordering  
+- **Activity tracking** — grouping and counters  
+
+---
+
+### 📄 Example
+
+```json
+{
+  "101": {
+    "name": "Sheriff Dispatch",
+    "category": "law"
+  },
+  "102": {
+    "name": "Fire Dispatch",
+    "category": "fire"
+  }
+}
 ---
 
 ## 📁 Project Structure
