@@ -43,6 +43,7 @@ ALGORITHM = CONFIG["server"]["algorithm"]
 
 RECORD_DIR = Path(CONFIG["paths"]["recordings"])
 
+REQUIRE_LAN_LOGIN = CONFIG["network"].get("require_lan_login", False)
 TG_FILE = BASE_DIR / CONFIG["paths"]["talkgroups"]
 USER_FILE = BASE_DIR / CONFIG["paths"]["users"]
 HTML_FILE = BASE_DIR / CONFIG["paths"]["html"]
@@ -264,17 +265,66 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(None)):
     except WebSocketDisconnect:
         if websocket in clients: clients.remove(websocket)
 
+
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     path = request.url.path
-    if any(path.startswith(p) for p in ["/", "/login", "/verify", "/static"]) or request.client.host.startswith(LAN_PREFIX):
+
+    client_ip = request.headers.get("x-forwarded-for", request.client.host)
+    client_ip = client_ip.split(",")[0].strip()
+
+    PUBLIC_PATHS = ["/login", "/verify", "/static"]
+
+    is_public_path = (
+        path == "/" or
+        any(path.startswith(p) for p in PUBLIC_PATHS)
+    )
+
+    is_lan = client_ip.startswith(LAN_PREFIX)
+
+#    print(f"[AUTH DEBUG] IP={client_ip} LAN={client_ip.startswith(LAN_PREFIX)} PATH={path}")
+
+    # ✅ LAN auto-auth (DO THIS FIRST)
+    if is_lan and not REQUIRE_LAN_LOGIN:
+        guest_token = jwt.encode(
+            {
+                "sub": "guest",
+                "exp": datetime.utcnow() + timedelta(hours=TOKEN_EXPIRE_HOURS)
+            },
+            SECRET_KEY,
+            algorithm=ALGORITHM
+        )
+
+        response = await call_next(request)
+
+        if "token" not in request.cookies:
+            response.set_cookie(
+                key="token",
+                value=guest_token,
+                httponly=False,
+                max_age=TOKEN_EXPIRE_HOURS * 3600
+            )
+
+        return response
+
+    # 1. Always allow public routes
+    if is_public_path:
         return await call_next(request)
-    token = request.query_params.get("token")
-    if token and verify_token(token): return await call_next(request)
+
+    # 2. Require auth
+    token = request.query_params.get("token") or request.cookies.get("token")
+    if token and verify_token(token):
+        return await call_next(request)
+
     return Response(status_code=401)
 
-@app.get("/")
-async def root(): return HTMLResponse(HTML_FILE.read_text())
+
+
+@app.api_route("/", methods=["GET", "HEAD"])
+async def root(request: Request):
+    if request.method == "HEAD":
+        return HTMLResponse(status_code=200)
+    return HTMLResponse(HTML_FILE.read_text())
 
 @app.get("/call/{f}")
 async def serve_audio(f: str, token: str = Query(None)):
