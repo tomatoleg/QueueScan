@@ -3,12 +3,14 @@ __pycache__/
 *.pyc
 
 # Config secrets
+demogroups.py
 bkp.sh
 backups
 config/config.yaml
 config/config.json
 config/users.json
 config/talkgroups.json
+config/talkgroups_sanitized.json
 
 # Logs
 logs/

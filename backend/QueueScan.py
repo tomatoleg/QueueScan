@@ -77,6 +77,20 @@ def load_users():
     if USER_FILE.exists():
         users = json.load(open(USER_FILE)).get("users", {})
 
+
+def format_call(filename, tg_map):
+    parts = filename.replace(".mp3", "").split("_")
+
+    date = parts[0]
+    time = parts[1]
+    tgid = parts[2]
+    radio = parts[3] if len(parts) > 3 else "Unknown"
+
+    tg = tg_map.get(tgid, {"name": f"TG {tgid}"})
+
+    display = f"{time} | {tg['name']} | Unit {radio}"
+
+    return display
 def load_talkgroups():
     global TG_MAP
     if TG_FILE.exists():
@@ -169,19 +183,22 @@ def parse_call(file_path):
                 frequency = raw
 
     ts = datetime.fromtimestamp(file_path.stat().st_mtime)
-
+    time_str = ts.strftime("%H:%M:%S")
+    radio_str = f"Unit {radio}" if radio != "Unknown" else "Unknown Unit"
     return {
-        "time": ts.strftime("%H:%M:%S"),
+        "tgid": tg_number,
+        "time": time_str,
         "talkgroup": f"{tg_info['name']} ({tg_number})",
         "talkgroup_name": tg_info["name"],
         "category": tg_info["category"],
         "radio": radio,
         "frequency": frequency,
         "file": filename,
+        "encrypted": encrypted,
         "duration": duration,
-        "tgid": tg_number,
-        "encrypted": encrypted
-    }
+        "display": f"{time_str} | {tg_info['name']} | {radio_str}"
+        }
+
 
 async def broadcast(event):
     dead = []

@@ -176,10 +176,15 @@ pre { background:#111; padding:10px; border-radius:5px; }
 </style>
 <script>
 Debug=false;
-seenCalls = new Set();
+const DEDUPE_WINDOW_MS = 30000; // 30 seconds
+let replayOrder = "chronological"; // or "reverse"
+// configurable window (milliseconds)
 let ws = null;
 let replayLock = false;
 let replayTargetTG = null;
+// 🔥 Time-based dedupe map (name → timestamp)
+let seenCalls = new Map();
+
 
   // ================= 🔥 TALKGROUP PRIORITY =================
   let talkgroupPriority = {};
@@ -290,6 +295,15 @@ function updateAuthUI(){
         logoutBtn.style.display = "none";
     }
 }
+function toggleReplayOrder(btn){
+    replayOrder = replayOrder === "chronological" ? "reverse" : "chronological";
+
+    if(btn){
+        btn.innerText = replayOrder === "chronological"
+            ? "Replay Order: Oldest → Newest"
+            : "Replay Order: Newest → Oldest";
+    }
+}
 
 function startApp(){
     document.getElementById("loginScreen").style.display = "none";
@@ -354,6 +368,7 @@ function startApp(){
     <button onclick="cancelReplay()" id="cancelReplayBtn" style="display:none;">
         ⛔ Cancel Replay
     </button>
+    <button onclick="toggleReplayOrder(this)"> Replay Order: Oldest → Newest </button>
 
     <label class="smallNote">
         <input type="checkbox" id="autoScrollToggle" checked>
@@ -802,7 +817,7 @@ function renderQueuePreview() {
     ">
         <b>#${i + 1}</b> — P${f._prio} <b>${f._tg}</b>
 <span style="float:right; opacity:0.7;">${f._time || ""}</span>
-        <div style="opacity:0.7; font-size:12px;">${f.name}</div>
+        <div style="opacity:0.7; font-size:12px;">${f._display}</div>
     </div>
     `;
 }).join("");
@@ -810,129 +825,140 @@ function renderQueuePreview() {
 
 }
 
-
 // Priority-aware enqueue
 function enqueueCall(file, category){
 
-    // 🔒 HARD FILTER ENFORCEMENT
-   if (
-       lockEnabled &&
-       !file._isReplay &&   // allow replay always
-       !allowedTalkgroups.has(file._tg)
-   ){
-       return; // ❌ do not enqueue
-   }
+    const now = Date.now();
 
-    // 🔒 Replay lock mode
-    if (replayLock && !file._isReplay) {
-      // Always push live traffic to the BACK during replay
-      callQueue.push(file);
-    
-      updateQueueDisplay();
-      renderQueuePreview();
-      return;
-      }
+    // =========================================================
+    // 🔥 ENSURE DISPLAY ALWAYS EXISTS (defensive)
+    // =========================================================
+    if (!file._display) {
+        file._display = `${file._time || ""} | ${file._tg || ""}`;
+    }
 
-    if(replayLock && file._tg !== replayTargetTG){
-       // 🔒 Still process normally — just don't preempt replay
-       // BUT DO NOT bypass dedupe or priority logic
-       file._deferred = true;   // mark as deferred (optional)
-      }
+    // =========================================================
+    // 🔥 TIME-BASED DEDUPE (GLOBAL - MUST BE FIRST)
+    // =========================================================
+    if (!file._isReplay) {
+        const lastSeen = seenCalls.get(file.name);
 
+        if (lastSeen && (now - lastSeen < DEDUPE_WINDOW_MS)) {
+            return; // ❌ duplicate within window
+        }
 
-    // Avoid duplicates
+        seenCalls.set(file.name, now);
+    }
 
-    // 🔥 HARD DEDUPE (queue + current + seen)
+    // Queue + current playback dedupe (still needed)
     if (
-        (!file._isReplay && seenCalls.has(file.name)) ||
         isInQueue(file.name) ||
         (currentFile && currentFile.name === file.name)
     ){
         return;
     }
 
-    // Track seen calls (live only)
-    if (!file._isReplay) {
-        seenCalls.add(file.name);
+    // =========================================================
+    // 🧹 CLEANUP OLD ENTRIES (prevents memory growth)
+    // =========================================================
+    for (const [key, ts] of seenCalls) {
+        if (now - ts > DEDUPE_WINDOW_MS) {
+            seenCalls.delete(key);
+        }
     }
 
+    // =========================================================
+    // 🔒 HARD FILTER ENFORCEMENT
+    // =========================================================
+    if (
+        lockEnabled &&
+        !file._isReplay &&
+        !allowedTalkgroups.has(file._tg)
+    ){
+        return;
+    }
 
+    // =========================================================
+    // 🔒 REPLAY LOCK HANDLING (AFTER DEDUPE)
+    // =========================================================
+    if (replayLock && !file._isReplay) {
+        // Live calls go to BACK but remain deduped
+        callQueue.push(file);
+        updateQueueDisplay();
+        renderQueuePreview();
+        return;
+    }
 
-   // optional cleanup to prevent memory growth
-   if (seenCalls.size > 2000) {
-       const first = seenCalls.values().next().value;
-       seenCalls.delete(first);
-       }
-   
+    if (replayLock && file._tg !== replayTargetTG) {
+        file._deferred = true; // optional
+    }
 
-    // Maintain max length
-    if(callQueue.length >= MAX_QUEUE){
+    // =========================================================
+    // QUEUE SIZE CONTROL
+    // =========================================================
+    if (callQueue.length >= MAX_QUEUE){
         callQueue.shift();
     }
 
-    // Insert based on priority
+    // =========================================================
+    // PRIORITY CALCULATION
+    // =========================================================
     let prio;
 
-    // 1️⃣ Replay
     if (file._isReplay) {
-        prio = 0;
+        prio = 0; // 🔥 replay always highest
     }
-
-    // 2️⃣ TGID override
     else if (file._tgid !== undefined && talkgroupPriority[file._tgid] !== undefined) {
         prio = talkgroupPriority[file._tgid];
     }
-
-    // 3️⃣ Category fallback
     else {
         prio = priorityOrder[category] || 99;
     }
 
-
-    // ✅ IMPORTANT: assign BEFORE inserting
     file._prio = prio;
 
-    // 🔥 REPLAY ALWAYS GOES TO FRONT
+    // =========================================================
+    // INSERTION LOGIC
+    // =========================================================
     if (file._isReplay) {
         callQueue.unshift(file);
     } else {
 
         let inserted = false;
 
-        for(let i=0;i<callQueue.length;i++){
+        for (let i = 0; i < callQueue.length; i++) {
             const existing = callQueue[i];
             const existingPrio = existing._prio || 99;
-    
-            // 🔥 NEVER insert ahead of replay items
-            if(existing._isReplay){
-                continue;
-            }
-    
-            if(prio < existingPrio){
-                callQueue.splice(i,0,file);
+
+            // Never jump ahead of replay
+            if (existing._isReplay) continue;
+
+            if (prio < existingPrio) {
+                callQueue.splice(i, 0, file);
                 inserted = true;
                 break;
             }
         }
-    
-        if(!inserted){
+
+        if (!inserted) {
             callQueue.push(file);
         }
     }
 
-
-
-
-    // Attach priority metadata (not strictly necessary but handy)
-    file._prio = prio;
-
+    // =========================================================
+    // UI UPDATE
+    // =========================================================
     updateQueueDisplay();
     renderQueuePreview();
 
-    if(!isPlaying && livePlayer.paused){
+    // =========================================================
+    // PLAYBACK TRIGGER
+    // =========================================================
+    if (!isPlaying && livePlayer.paused) {
         playNextInQueue();
     }
 }
+
 function getPriorityStyle(prio){
     if(prio === 0){
         return "background:#ffcc00; color:#000; font-weight:bold;";
@@ -974,7 +1000,7 @@ function normalizeTG(tg){
         .toLowerCase();
 }
 
-function playReplayFromRow(btn, file, tgid, talkgroup, category,time){
+function playReplayFromRow(btn, file, tgid, talkgroup, category,time,display){
 
     const fileObj = {
         name: file,
@@ -983,7 +1009,8 @@ function playReplayFromRow(btn, file, tgid, talkgroup, category,time){
         _category: category || "other",
         _prio: 0,   // 🔥 replay priority
         _isReplay: true,
-        _time: time   
+        _time: time,
+        _display: display
     };
 
     // 🔥 Prevent duplicates
@@ -1272,8 +1299,15 @@ async function replayTalkgroup(tgid, tg){
             return;
         }
 
-        // Oldest → newest playback order
-        data.forEach(call => {
+        // 🔥 Apply selected order
+        let calls = [...data];
+
+        if(replayOrder === "reverse"){
+            calls.reverse();
+        }
+
+        // Enqueue in chosen order
+        calls.forEach(call => {
             enqueueCall({
                 name: call.file,
                 _tg: call.talkgroup,
@@ -1281,7 +1315,8 @@ async function replayTalkgroup(tgid, tg){
                 _category: call.category || "other",
                 _prio: 0,
                 _isReplay: true,
-                _time: call.time
+                _time: call.time,
+                _display: call.display
             }, call.category || "other");
         });
 
@@ -1353,15 +1388,16 @@ function connectWebSocket(){
 
             if(isAllowed){
                 data.file._tg = data.talkgroup;
-//                enqueueCall(data.file, data.category || "other");
                 const fileObj = { 
                            name: data.file,
                            _tg: data.talkgroup,
                            _tgid: data.tgid,
                            _prio: priorityOrder[data.category] || priorityOrder.other,
-                           _time: data.time 
+                           _time: data.time,
+                           _display: data.display
                        };
 
+//console.log("WS DATA:", data);
                        enqueueCall(fileObj, data.category || "other");
             }
         }
@@ -1403,7 +1439,7 @@ function connectWebSocket(){
              <td>${
                  row.encrypted
                      ? "🔒"
-                     : `<button onclick="playReplayFromRow(this, '${row.file}','${row.tgid}', '${row.talkgroup}', '${row.category}', '${row.time}')">▶</button>`
+                     : `<button onclick="playReplayFromRow(this, '${row.file}','${row.tgid}', '${row.talkgroup}', '${row.category}', '${row.time}', '${row.display}')">▶</button>`
              }</td>
          `;
 
