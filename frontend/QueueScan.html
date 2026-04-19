@@ -16,6 +16,22 @@ th { background:#222; text-align:left; padding:6px; }
     width: 100%;
 }
 
+/* TV mode */
+body.tv-mode {
+    font-size: 1.8rem;
+}
+
+.tv-mode #nowPlaying {
+    font-size: 3rem;
+}
+
+.tv-mode #queue {
+    font-size: 2rem;
+}
+
+.tv-mode #history {
+    font-size: 1.5rem;
+}
 @media (max-width: 768px) {
 
     .playerRow {
@@ -182,12 +198,19 @@ let replayOrder = "chronological"; // or "reverse"
 let ws = null;
 let replayLock = false;
 let replayTargetTG = null;
+let talkgroupPriority = {};
+let pingInterval = null;
 // 🔥 Time-based dedupe map (name → timestamp)
 let seenCalls = new Map();
 
+const params = new URLSearchParams(window.location.search);
+const mode = params.get("mode");
+
+if(mode === "tv"){
+    document.body.classList.add("tv-mode");
+}
 
   // ================= 🔥 TALKGROUP PRIORITY =================
-  let talkgroupPriority = {};
 
   // Load saved priorities
   (function loadPriorityState(){
@@ -1300,7 +1323,6 @@ if (!token) {
     );
 }
 
-let pingInterval = null;
 
 function startPing(){
     if(pingInterval) clearInterval(pingInterval);
