@@ -95,6 +95,7 @@ def format_call(filename, tg_map):
     display = f"{time} | {tg['name']} | Unit {radio}"
 
     return display
+
 def load_talkgroups():
     global TG_MAP
     if TG_FILE.exists():
@@ -264,6 +265,11 @@ def verify(token: str = Query(None)):
         raise HTTPException(status_code=401)
 
     return {"user": user}
+
+@app.get("/api/talkgroups")
+def get_talkgroups():
+    with open("talkgroups.json") as f:
+        return json.load(f)
 
 @app.post("/login")
 def login(data: LoginRequest, request: Request):

@@ -480,6 +480,31 @@ let currentFile = null;
 
 connectWebSocket();
 
+async function loadDefaultsFromServer(){
+    try{
+        // Only run if no filters saved yet
+        if(localStorage.getItem("allowedTalkgroups")) return;
+
+        const res = await fetch("/api/talkgroups");
+        const data = await res.json();
+
+        const defaults = Object.entries(data)
+            .filter(([tgid, obj]) => obj.default === true)
+            .map(([tgid]) => parseInt(tgid, 10));
+
+        allowedTalkgroups = new Set(defaults);
+
+        // Enable filter automatically on first run
+        lockEnabled = true;
+
+        persistFilterState();
+
+        console.log("Default filters loaded:", defaults);
+
+    }catch(e){
+        console.warn("Failed to load default talkgroups");
+    }
+}
 
 function togglePlaybackMode(btn) {
     playbackMode = playbackMode === "normal" ? "grouped" : "normal";
@@ -547,7 +572,7 @@ const priorityOrder = {
 
 // Lock / filter system
 let allowedTalkgroups = new Set();
-let lockEnabled = false;
+let lockEnabled = true;
 
 // Load persisted filters
 (function loadFilterState(){
@@ -556,15 +581,21 @@ let lockEnabled = false;
         if(stored){
             const arr = JSON.parse(stored);
             if(Array.isArray(arr)){
-                allowedTalkgroups = new Set(arr);
+                allowedTalkgroups = new Set(
+                                               arr
+                                                   .map(v => parseInt(v, 10))
+                                                   .filter(v => !isNaN(v))
+                                           );
             }
         }
+
         const lock = localStorage.getItem("lockEnabled");
         if(lock === "true"){
             lockEnabled = true;
         }
-    }catch(e){}
-
+    }catch(e){
+        console.warn("Failed to load filter state");
+    }
 })();
 
 //Waveform Block
@@ -829,7 +860,7 @@ function renderQueuePreview() {
 function enqueueCall(file, category){
 
     const now = Date.now();
-
+    file._tgid = parseInt(file._tgid, 10);
     // =========================================================
     // 🔥 ENSURE DISPLAY ALWAYS EXISTS (defensive)
     // =========================================================
@@ -866,17 +897,27 @@ function enqueueCall(file, category){
             seenCalls.delete(key);
         }
     }
+//console.log("FILTER CHECK:", {
+//    tg: file._tg,
+//    normalized: parseInt(file._tgid),
+//    allowed: [...allowedTalkgroups],
+//    lockEnabled
+//});
 
     // =========================================================
     // 🔒 HARD FILTER ENFORCEMENT
     // =========================================================
     if (
-        lockEnabled &&
-        !file._isReplay &&
-        !allowedTalkgroups.has(file._tg)
-    ){
-        return;
-    }
+       lockEnabled &&
+       allowedTalkgroups.size > 0 &&   // ⭐ THIS LINE
+       !file._isReplay &&
+       (
+         isNaN(file._tgid) ||
+         !allowedTalkgroups.has(file._tgid)
+       )
+     ){
+       return;
+     }
 
     // =========================================================
     // 🔒 REPLAY LOCK HANDLING (AFTER DEDUPE)
@@ -996,6 +1037,7 @@ function reSortQueue(){
 
 function normalizeTG(tg){
     return (tg || "")
+        .replace(/\(\d+\)/g, "")   // 🔥 remove (12345)
         .trim()
         .toLowerCase();
 }
@@ -1040,7 +1082,7 @@ function playNextInQueue(){
     // 🔥 FILTER QUEUE BEFORE PLAYBACK
     if (lockEnabled) {
         callQueue = callQueue.filter(f =>
-            f._isReplay || allowedTalkgroups.has(f._tg)
+            f._isReplay || allowedTalkgroups.has(parseInt(f._tgid))
         );
     }
 
@@ -1167,7 +1209,7 @@ function toggleLockMode(btn){
     if(lockEnabled){
         // 🔥 purge disallowed items immediately
         callQueue = callQueue.filter(f =>
-            f._isReplay || allowedTalkgroups.has(f._tg)
+            f._isReplay || allowedTalkgroups.has(parseInt(f._tgid))
         );
     }
 
@@ -1382,24 +1424,16 @@ function connectWebSocket(){
             //banner.className = "now-" + data.category;
 
             // Filter logic: when lock is ON, only allowedTalkgroups pass
-            const isAllowed =
-                  !lockEnabled ||
-                  allowedTalkgroups.has(data.talkgroup);
-
-            if(isAllowed){
-                data.file._tg = data.talkgroup;
-                const fileObj = { 
-                           name: data.file,
-                           _tg: data.talkgroup,
-                           _tgid: data.tgid,
-                           _prio: priorityOrder[data.category] || priorityOrder.other,
-                           _time: data.time,
-                           _display: data.display
-                       };
-
-//console.log("WS DATA:", data);
-                       enqueueCall(fileObj, data.category || "other");
-            }
+            const fileObj = { 
+               name: data.file,
+               _tg: data.talkgroup,
+               _tgid: parseInt(data.tgid,10),
+               _prio: priorityOrder[data.category] || priorityOrder.other,
+               _time: data.time,
+               _display: data.display
+            };
+            
+            enqueueCall(fileObj, data.category || "other");
         }
 
         // HISTORY (append, respect auto-scroll)
@@ -1464,13 +1498,13 @@ function connectWebSocket(){
 
             const checkbox=document.createElement("input");
             checkbox.type = "checkbox";
-            checkbox.checked = allowedTalkgroups.has(tg);
+            checkbox.checked = allowedTalkgroups.has(parseInt(tgid));
 
             checkbox.onchange = () => {
                 if(checkbox.checked){
-                    allowedTalkgroups.add(tg);
+                    allowedTalkgroups.add(parseInt(tgid));
                 } else {
-                    allowedTalkgroups.delete(tg);
+                    allowedTalkgroups.delete(parseInt(tgid));
                 }
                 persistFilterState();
             };
@@ -1573,6 +1607,7 @@ function getCookie(name) {
 window.onload = async () => {
     const token = localStorage.getItem("token") || getCookie("token");
 
+
     if(token){
         try {
             const res = await fetch(
@@ -1591,6 +1626,7 @@ window.onload = async () => {
             }
 
             updateAuthUI();
+            await loadDefaultsFromServer();
             startApp();
 
         } catch(e){
