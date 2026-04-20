@@ -2,7 +2,7 @@
 
 QueueScan is a real-time P25 scanner dashboard that transforms SDRTrunk call recordings into a live, interactive web-based listening experience.
 
-It provides intelligent audio queuing, talkgroup filtering, replay functionality, and activity visualization through a modern FastAPI + WebSocket backend and responsive frontend.
+It provides intelligent audio queuing, talkgroup filtering, replay functionality, and activity visualization through a modern Python FastAPI + WebSocket backend and responsive frontend.
 
 ---
 
