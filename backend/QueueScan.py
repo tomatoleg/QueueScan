@@ -268,7 +268,10 @@ def verify(token: str = Query(None)):
 
 @app.get("/api/talkgroups")
 def get_talkgroups():
-    with open("talkgroups.json") as f:
+    if not TG_FILE.exists():
+        raise HTTPException(status_code=500, detail="talkgroups.json not found")
+
+    with open(TG_FILE) as f:
         return json.load(f)
 
 @app.post("/login")
