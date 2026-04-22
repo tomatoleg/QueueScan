@@ -18,6 +18,11 @@ let pingInterval = null;
 // 🔥 Time-based dedupe map (name → timestamp)
 let seenCalls = new Map();
 
+//Force any stores filters to be removed so that we can load the defaults from the config
+if (params.get("mode") === "tv") {
+    localStorage.setItem("lockEnabled", "true");
+    localStorage.removeItem("allowedTalkgroups");
+}
 
   // ================= 🔥 TALKGROUP PRIORITY =================
 
@@ -272,7 +277,6 @@ function startApp(){
 
 
 
-<h4>Call History</h4>
 <div class="smallNote">
     Auto-scroll shows the newest calls; uncheck to review older traffic without it jumping.
 </div>
@@ -800,7 +804,7 @@ function enqueueCall(file, category){
     // INSERTION LOGIC
     // =========================================================
     if (file._isReplay) {
-        callQueue.unshift(file);
+        callQueue.push(file);
     } else {
 
         let inserted = false;
@@ -1186,6 +1190,22 @@ async function replayTalkgroup(tgid, tg){
         }
 
         // Enqueue in chosen order
+       const orderedCalls = replayOrder === "reverse"
+           ? [...data].reverse() : [...data];
+
+       orderedCalls.forEach(call => {
+            enqueueCall({
+                name: call.file,
+                _tg: call.talkgroup,
+                _tgid: call.tgid,
+                _category: call.category || "other",
+                _prio: 0,
+                _isReplay: true,
+                _time: call.time,
+                _display: call.display
+            }, call.category || "other");
+       });
+/*
         calls.forEach(call => {
             enqueueCall({
                 name: call.file,
@@ -1198,6 +1218,7 @@ async function replayTalkgroup(tgid, tg){
                 _display: call.display
             }, call.category || "other");
         });
+*/
 
         updateQueueDisplay();
         renderQueuePreview();
@@ -1381,7 +1402,7 @@ function connectWebSocket(){
             // Auto option
             const autoOpt = document.createElement("option");
             autoOpt.value = "";
-            autoOpt.text = "Priority Auto";
+            autoOpt.text = "PAuto";
             prioritySelect.appendChild(autoOpt);
 
             // P1–P5
