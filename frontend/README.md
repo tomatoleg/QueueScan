@@ -591,17 +591,6 @@ QueueScan/
 
 ---
 
-# Recommended Git Workflow
-
-```bash
-git status
-git add .
-git commit -m "Describe change"
-git push
-```
-
----
-
 # QueueScan Frontend Summary
 
 QueueScan Frontend provides:
