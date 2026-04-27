@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect, Query
 from fastapi.responses import HTMLResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 import yaml
@@ -110,13 +111,34 @@ def verify_token(token: str):
         return None
 
 def get_tg_info(tg_number):
-    key = str(int(tg_number)) if tg_number.isdigit() else str(tg_number)
-    tg = TG_MAP.get(key, {"name": f"TG {key}", "category": "other"})
+    key = str(int(tg_number)) if str(tg_number).isdigit() else str(tg_number)
+
+    tg = TG_MAP.get(
+        key,
+        {
+            "name": f"TG {key}",
+            "category": "other",
+            "priority": 1,
+            "tv": False,
+            "enabled": True,
+            "listen": True,
+            "record": True,
+            "favorite": False,
+            "tags": [],
+        }
+    )
+
     raw = tg.get("category", "other").lower()
-    if raw in ["police", "law", "sheriff"]: tg["category"] = "law"
-    elif raw == "fire": tg["category"] = "fire"
-    elif raw in ["ems", "medical"]: tg["category"] = "ems"
-    else: tg["category"] = "other"
+
+    if raw in ["police", "law", "sheriff"]:
+        tg["category"] = "law"
+    elif raw == "fire":
+        tg["category"] = "fire"
+    elif raw in ["ems", "medical"]:
+        tg["category"] = "ems"
+    else:
+        tg["category"] = "other"
+
     return tg
 
 def extract_tg_from_filename(filename):
@@ -201,6 +223,11 @@ def parse_call(file_path):
         "file": filename,
         "encrypted": encrypted,
         "duration": duration,
+        "priority": tg_info.get("priority", 1),
+        "tv": tg_info.get("tv", False),
+        "agency": tg_info.get("agency"),
+        "label": tg_info.get("label"),
+        "favorite": tg_info.get("favorite", False),
         "display": f"{time_str} | {tg_info['name']} | {radio_str}"
         }
 
@@ -226,6 +253,16 @@ async def lifespan(app: FastAPI):
     watcher_task.cancel()
 
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://192.168.1.20:5173",
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # ============================================================
@@ -267,12 +304,16 @@ def verify(token: str = Query(None)):
     return {"user": user}
 
 @app.get("/api/talkgroups")
-def get_talkgroups():
+def get_reload_talkgroups():
     if not TG_FILE.exists():
         raise HTTPException(status_code=500, detail="talkgroups.json not found")
 
     with open(TG_FILE) as f:
         return json.load(f)
+
+@app.get("/api/talkgroups")
+def get_talkgroups():
+    return TG_MAP
 
 @app.post("/login")
 def login(data: LoginRequest, request: Request):
