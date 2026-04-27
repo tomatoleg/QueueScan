@@ -24,7 +24,7 @@ from inotify_simple import INotify, flags
 # CONFIGURATION & PATHS
 # ============================================================
 
-BASE_DIR = Path(__file__).parent.parent
+BASE_DIR = Path(__file__).parent
 CONFIG_FILE = BASE_DIR / "config/config.yaml"
 
 if not CONFIG_FILE.exists():

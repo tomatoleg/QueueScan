@@ -1,28 +1,38 @@
 # Python
 __pycache__/
 *.pyc
+venv/
+.env
 
-# Config secrets
-demogroups.py
-bkp.sh
-backups
-config/config.yaml
-config/config.json
-config/users.json
-config/talkgroups.json
-config/talkgroups_sanitized.json
+# Backend Config Secrets
+backend/config/config.yaml
+backend/config/config.json
+backend/config/users.json
 
 # Logs
-logs/*
-!logs/.gitkeep
+backend/logs/*
+!backend/logs/.gitkeep
 
-# Recordings (VERY IMPORTANT)
-recordings/
+# Runtime
+backend/recordings/
+*.db
+backend/tokens.json
 
-# OS junk
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/BACKUP/
+frontend/.vite/
+
+# Temporary
+backups/
+*.save
+*.bak
+
+# OS
 .DS_Store
 Thumbs.db
 
-# Virtual env
-venv/
-.env
+# Utilities
+demogroups.py
+bkp.sh
