@@ -29,7 +29,7 @@ It provides intelligent audio queuing, talkgroup filtering, replay functionality
 sdrtrunk → MP3 Recordings → FastAPI Backend → WebSocket → Browser UI
 ```
 
-* **sdrtrunk** generates call recordings
+* **sdrtrunk** generates call recordings (https://github.com/dsheirer/sdrtrunk)
 * **Backend** watches recordings and streams metadata
 * **Frontend** manages queue, playback, filtering, and UI
 
