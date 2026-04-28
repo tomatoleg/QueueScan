@@ -7,8 +7,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+
   server: {
     host: true,
+    allowedHosts: [
+      "fedora.tail33111d.ts.net",
+    ],
   },
 });
-

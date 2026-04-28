@@ -1,5 +1,10 @@
+const protocol = window.location.protocol;
+const hostname = window.location.hostname;
+
 export const config = {
-  backendUrl: import.meta.env.VITE_BACKEND_URL,
+  backendUrl:
+    import.meta.env.VITE_BACKEND_URL ||
+    `${protocol}//${hostname}:8080`,
 
   websocketPath: "/ws",
   apiPath: "",

@@ -56,6 +56,10 @@ LAN_PREFIX = CONFIG["network"]["lan_prefix"]
 SESSION_TIMEOUT = CONFIG["session"]["timeout"]
 MAX_HISTORY = CONFIG["limits"]["max_history"]
 MAX_ACTIVE = CONFIG["limits"]["max_active"]
+CORS_ORIGINS = CONFIG.get("cors", {}).get(
+    "allow_origins",
+    []
+)
 
 
 # ============================================================
@@ -255,10 +259,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://192.168.1.20:5173",
-        "http://localhost:5173",
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

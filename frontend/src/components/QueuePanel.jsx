@@ -4,29 +4,55 @@ import { useScannerStore } from "../store/useScannerStore";
 export default function QueuePanel() {
   const queue = useScannerStore((s) => s.queue);
   const currentCall = useScannerStore((s) => s.currentCall);
+  const talkgroups = useScannerStore((s) => s.talkgroups);
 
   const [now, setNow] = useState(Date.now());
+
   const oldestItem = queue[0];
 
   const oldestAgeMs = oldestItem?.queuedAt
     ? now - oldestItem.queuedAt
     : 0;
-  
+
   const oldestAgeSeconds = Math.floor(oldestAgeMs / 1000);
-  const talkgroups = useScannerStore(
-     (s) => s.talkgroups
-   );
 
   const criticalCount = queue.filter(
     (q) => (q.priority ?? 2) >= 4
   ).length;
-    useEffect(() => {
-      const timer = setInterval(() => {
-        setNow(Date.now());
-      }, 1000);
-  
-      return () => clearInterval(timer);
-    }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const groupedQueue = queue.reduce((acc, item) => {
+    const key = item.tgid || "unknown";
+
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+
+    acc[key].push(item);
+
+    return acc;
+  }, {});
+
+  const groupedEntries = Object.entries(groupedQueue).sort(
+    (a, b) => {
+      const aPriority = Math.max(
+        ...a[1].map((c) => c.priority || 0)
+      );
+
+      const bPriority = Math.max(
+        ...b[1].map((c) => c.priority || 0)
+      );
+
+      return bPriority - aPriority;
+    }
+  );
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -66,11 +92,11 @@ export default function QueuePanel() {
     if (oldestAgeSeconds > 90) {
       return "text-red-400";
     }
-  
+
     if (oldestAgeSeconds > 45) {
       return "text-yellow-400";
     }
-  
+
     return "text-green-400";
   };
 
@@ -89,7 +115,6 @@ export default function QueuePanel() {
 
   return (
     <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
-
       <div className="flex justify-between items-start mb-4">
         <div>
           <h2 className="text-xl font-semibold">
@@ -100,80 +125,120 @@ export default function QueuePanel() {
             {queue.length} pending
           </div>
         </div>
-      
+
         <div className="text-right space-y-1">
           <div
             className={`text-sm font-medium ${getHealthColor()}`}
           >
             Delay: {formatAge(oldestAgeMs)}
           </div>
-      
+
           <div className="text-xs opacity-60">
             Critical Waiting: {criticalCount}
           </div>
         </div>
       </div>
 
-      <div className="space-y-2 max-h-[600px] overflow-y-auto">
-        {queue.map((item, index) => {
-          const ageMs = now - (item.queuedAt || now);
-          const ageSeconds = Math.floor(ageMs / 1000);
-          const tgMeta = talkgroups[item.tgid] || {};
-          const isActive =
-            currentCall?.file === item.file;
+      <div className="space-y-4 max-h-[600px] overflow-y-auto">
+        {groupedEntries.map(([tgid, calls]) => {
+          const first = calls[0];
+          const tgMeta = talkgroups[tgid] || {};
 
           return (
             <div
-              key={item.file}
-              className={`rounded-lg border p-3 transition ${
-                isActive
-                  ? "ring-2 ring-green-400 shadow-lg shadow-green-500/20 border-green-500"
-                  : "border-zinc-700 bg-zinc-800"
-              }`}
+              key={tgid}
+              className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden"
             >
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-xs opacity-50">
-                      #{index + 1}
+              <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="font-semibold text-sm">
+                      {tgMeta.label ||
+                        first.talkgroup_name ||
+                        first.talkgroup}
                     </div>
 
-                    <div className="font-semibold">
-                      {tgMeta.label || item.talkgroup}
+                    <div className="text-xs text-zinc-500">
+                      TGID {tgid} • {calls.length} calls
                     </div>
-                    <div className="text-xs opacity-60">
-                      {tgMeta.agency || tgMeta.group}
-                    </div>
-
-                    {isActive && (
-                      <div className="text-xs px-2 py-0.5 rounded bg-green-600">
-                        LIVE
-                      </div>
-                    )}
                   </div>
 
-                  <div className="text-xs opacity-50 mt-1">
-                    TGID: {item.tgid} Time: {item.time}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end gap-2">
                   <div
                     className={`text-xs px-2 py-1 rounded font-medium ${getPriorityColor(
-                      item.priority ?? 2
+                      Math.max(
+                        ...calls.map(
+                          (c) => c.priority ?? 2
+                        )
+                      )
                     )}`}
                   >
-                    P{item.priority ?? 2}
-                  </div>
-
-                  <div
-                    className={`text-sm font-mono ${getAgeStyle(
-                      ageSeconds
-                    )}`}
-                  >
-                    {formatAge(ageMs)}
+                    P
+                    {Math.max(
+                      ...calls.map(
+                        (c) => c.priority ?? 2
+                      )
+                    )}
                   </div>
                 </div>
+              </div>
+
+              <div className="divide-y divide-zinc-800">
+                {calls.map((item, index) => {
+                  const ageMs =
+                    now - (item.queuedAt || now);
+
+                  const ageSeconds = Math.floor(
+                    ageMs / 1000
+                  );
+
+                  const isActive =
+                    currentCall?.file === item.file;
+
+                  return (
+                    <div
+                      key={item.file}
+                      className={`p-3 transition ${
+                        isActive
+                          ? "bg-green-500/10 ring-1 ring-green-500"
+                          : "bg-zinc-900"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <div className="text-xs opacity-50">
+                              #{index + 1}
+                            </div>
+
+                            <div className="text-sm font-medium">
+                              {item.radio || "Unknown"}
+                            </div>
+
+                            {isActive && (
+                              <div className="text-xs px-2 py-0.5 rounded bg-green-600">
+                                LIVE
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="text-xs opacity-50 mt-1">
+                            {item.time}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1">
+                          <div
+                            className={`text-sm font-mono ${getAgeStyle(
+                              ageSeconds
+                            )}`}
+                          >
+                            {formatAge(ageMs)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
