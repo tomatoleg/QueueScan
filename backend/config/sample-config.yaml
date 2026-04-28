@@ -19,6 +19,36 @@ server:
 
   # JWT signing algorithm
   algorithm: "HS256"
+  
+# Cross-Origin Resource Sharing (CORS)
+# Controls which frontend origins are permitted to access the QueueScan backend.
+#
+# Add all approved frontend URLs that may connect to FastAPI APIs or WebSockets.
+#
+# Examples:
+# - Local Vite development server
+# - LAN-based frontend access
+# - Tailscale hostname
+# - Production VPS/domain deployment
+#
+# Notes:
+# - Origins must include protocol (http:// or https://)
+# - Port must match frontend server port if non-standard
+# - allow_credentials should remain true when using authentication or cookies
+#
+# Example:
+# http://localhost:5173
+# https://queuescan.yourdomain.com
+# https://fedora.tailnet.ts.net
+
+cors:
+  allow_origins:
+    - "http://localhost:5173"
+    - "https://queuescan.yourdomain.com"
+    - "http://192.168.1.20:5173"
+
+  allow_credentials: true
+
 
 
 network:
