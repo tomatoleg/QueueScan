@@ -1,4 +1,5 @@
 # QueueScan
+<img width="1627" height="879" alt="image" src="https://github.com/user-attachments/assets/e63d778b-0064-4575-b1ce-773dc08fe177" />
 
 QueueScan is a real-time P25 scanner dashboard that transforms SDRTrunk call recordings into a live, interactive web-based listening experience.
 
