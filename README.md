@@ -5,7 +5,7 @@
 
 
 
-QueueScan is a real-time P25 scanner dashboard that transforms SDRTrunk call recordings into a live, interactive web-based listening experience.
+QueueScan is a real-time P25 scanner dashboard that transforms sdrtrunk call recordings into a live, interactive web-based listening experience.
 
 It provides intelligent audio queuing, talkgroup filtering, replay functionality, and activity visualization through a modern Python FastAPI + WebSocket backend and responsive frontend.
 
@@ -26,10 +26,10 @@ It provides intelligent audio queuing, talkgroup filtering, replay functionality
 ## 🏗️ Architecture
 
 ```
-SDRTrunk → MP3 Recordings → FastAPI Backend → WebSocket → Browser UI
+sdrtrunk → MP3 Recordings → FastAPI Backend → WebSocket → Browser UI
 ```
 
-* **SDRTrunk** generates call recordings
+* **sdrtrunk** generates call recordings
 * **Backend** watches recordings and streams metadata
 * **Frontend** manages queue, playback, filtering, and UI
 
@@ -38,7 +38,7 @@ SDRTrunk → MP3 Recordings → FastAPI Backend → WebSocket → Browser UI
 ## 📦 Requirements
 
 * Python 3.10+
-* SDRTrunk (recording enabled) https://github.com/Dsheirer/sdrtrunk/releases
+* sdrtrunk (recording enabled) https://github.com/Dsheirer/sdrtrunk/releases
 * Linux (recommended)
 
 Python dependencies:
@@ -79,7 +79,7 @@ cp config/config.example.yaml config/config.yaml
 
 Edit the config file:
 
-* Set your SDRTrunk recordings path
+* Set your sdrtrunk recordings path
 * Generate a secure secret key
 
 ### Generate a secret key
@@ -109,7 +109,7 @@ http://localhost:8080
 
 Key settings in `config.yaml`:
 
-* `paths.recordings` → SDRTrunk recordings directory
+* `paths.recordings` → sdrtrunk recordings directory
 * `auth.secret_key` → JWT signing key
 * `limits.max_history` → number of calls stored
 * `limits.max_active` → active talkgroups displayed
@@ -122,7 +122,7 @@ Key settings in `config.yaml`:
 
 ### 🧠 Purpose
 
-SDRTrunk outputs activity using **raw talkgroup IDs only**. These IDs (e.g., `101`, `3021`) are not human-friendly and contain no inherent context.
+sdrtrunk outputs activity using **raw talkgroup IDs only**. These IDs (e.g., `101`, `3021`) are not human-friendly and contain no inherent context.
 
 `talkgroups.json` provides a lightweight mapping layer that enriches those IDs with:
 
@@ -230,7 +230,7 @@ Instead of simply playing audio, QueueScan provides:
 ```text
 ┌─────────────────────────────┐
 │        Radio System         │
-│ SDRTrunk / OP25 / P25 Feed │
+│ sdrtrunk / OP25 / P25 Feed │
 └──────────────┬──────────────┘
                │
                ▼
@@ -266,7 +266,7 @@ QueueScan begins with radio monitoring.
 
 Supported sources:
 
-* SDRTrunk
+* sdrtrunk
 * OP25
 * P25 systems
 * trunked radio systems
