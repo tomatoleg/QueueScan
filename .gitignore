@@ -8,6 +8,8 @@ venv/
 backend/config/config.yaml
 backend/config/config.json
 backend/config/users.json
+backend/config/talkgroups.json
+backend/config/talkgroups_sanitized.json
 
 # Logs
 backend/logs/*
