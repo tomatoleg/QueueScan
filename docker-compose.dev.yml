@@ -1,0 +1,27 @@
+services:
+  backend-dev:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: queuescan-backend-dev
+    environment:
+      RUNNING_IN_DOCKER: "1"
+    volumes:
+      - ./backend:/app
+      - ./config:/app/config
+      - /home/trey/SDRTrunk/recordings:/app/recordings
+    ports:
+      - "8080:8080"
+    command: uvicorn QueueScan:app --host 0.0.0.0 --port 8080 --reload
+
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: queuescan-frontend-dev
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    command: npm run dev -- --host
+
