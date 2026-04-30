@@ -1,5 +1,6 @@
 import { useScannerStore } from "../store/useScannerStore";
 import { config } from "../config";
+import { apiFetch } from "../services/api";
 
 export default function ActivityPanel() {
   const currentCall = useScannerStore((s) => s.currentCall);
@@ -15,10 +16,6 @@ export default function ActivityPanel() {
 
   const enqueueReplay = useScannerStore((s) => s.enqueueReplay);
   const popReplay = useScannerStore((s) => s.popReplay);
-
-  const backendHost = config.backendUrl
-    .replace("http://", "")
-    .replace("https://", "");
 
   const entries = Object.entries(activity)
     .map(([tg, obj]) => {
@@ -75,29 +72,40 @@ export default function ActivityPanel() {
   };
 
   const replayTalkgroup = async (tgid) => {
-    try {
-      const token = localStorage.getItem("token");
+     try {
+       const token = localStorage.getItem("token");
+   
 
-      const res = await fetch(
-        `http://${backendHost}/replay/${tgid}`
-      );
+       const replayUrl =
+         `${config.replayPath}/${tgid}`;
+   
+       debug("Activity Replay URL:", replayUrl);
+   
+       const res = await apiFetch(replayUrl);
+   
+       if (!res.ok) {
+         throw new Error(
+           `Replay request failed: ${res.status}`
+         );
+       }
 
-      const data = await res.json();
+       const data = await res.json();
 
-      const replayUrls = data.map((call) => ({
-        url: `http://${backendHost}/call/${call.file}?token=${token}`,
-        call,
-      }));
+       const replayUrls = data.map((call) => ({
+         url:
+           `${config.backendUrl}/call/${call.file}?token=${token}`,
+         call,
+       }));
 
-      enqueueReplay(replayUrls);
-
-      setTimeout(() => {
-        popReplay();
-      }, 50);
-    } catch (err) {
-      console.error("Replay failed", err);
-    }
-  };
+       enqueueReplay(replayUrls);
+   
+       setTimeout(() => {
+         popReplay();
+       }, 50);
+     } catch (err) {
+       console.error("Replay failed", err);
+     }
+   };
 
   return (
     <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">

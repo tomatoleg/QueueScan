@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { config } from "../config";
 import { useAuthStore } from "../store/useAuthStore";
+import { apiFetch } from "../services/api";
 
 export default function Login() {
   const login = useAuthStore((s) => s.login);
@@ -11,7 +12,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const autoGuestLogin = async () => {
      try {
-       const res = await fetch(`${config.backendUrl}/login`, {
+       const res = await apiFetch("/login", {
          method: "POST",
          headers: {
            "Content-Type": "application/json",
@@ -61,7 +62,8 @@ useEffect(() => {
     setLoading(true);
 
     try {
-      const res = await fetch(`${config.backendUrl}/login`, {
+
+      const res = await apiFetch("/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

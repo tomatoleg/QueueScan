@@ -2,718 +2,515 @@
 <img width="1627" height="879" alt="image" src="https://github.com/user-attachments/assets/e63d778b-0064-4575-b1ce-773dc08fe177" />
 <img width="1629" height="941" alt="image" src="https://github.com/user-attachments/assets/de53e592-72c2-4fab-be7d-4c15508468d1" />
 <img width="1604" height="566" alt="image" src="https://github.com/user-attachments/assets/b43070de-f619-40f2-8596-e1b7f8878b92" />
+ # QueueScan
+
+> Real-time P25 scanner monitoring platform with replay, grouped conversations, live WebSocket updates, queue intelligence, Docker deployment, and TV-mode monitoring.
 
 
+# Overview
 
-QueueScan is a real-time P25 scanner dashboard that transforms sdrtrunk call recordings into a live, interactive web-based listening experience.
+QueueScan is a full-stack scanner monitoring application designed to provide a modern interface for radio traffic monitoring.
 
-It provides intelligent audio queuing, talkgroup filtering, replay functionality, and activity visualization through a modern Python FastAPI + WebSocket backend and responsive frontend.
+The system combines:
 
----
+* **FastAPI backend**
+* **React + Vite frontend**
+* **WebSocket live updates**
+* **Replay queue engine**
+* **Talkgroup metadata integration**
+* **Docker + Nginx deployment**
+* **TV / kiosk display mode**
+* **Priority-aware playback**
+* **Conversation grouping by talkgroup**
 
-## 🚀 Features
-
-* 🎧 Live + queued audio playback
-* 🔒 Talkgroup-based audio filtering (lock mode)
-* 🔁 Replay individual calls or entire talkgroups
-* ⚡ Priority-based call handling
-* 📊 Real-time activity tracking
-* 🌐 WebSocket-driven low-latency updates
-* 🔐 Token-based authentication
-
----
-
-## 🏗️ Architecture
-
-```
-sdrtrunk → MP3 Recordings → FastAPI Backend → WebSocket → Browser UI
-```
-
-* **sdrtrunk** generates call recordings (https://github.com/dsheirer/sdrtrunk)
-* **Backend** watches recordings and streams metadata
-* **Frontend** manages queue, playback, filtering, and UI
+QueueScan is designed to work alongside SDRTrunk / OP25-style workflows and can ingest call metadata and recordings for playback and monitoring.
 
 ---
 
-## 📦 Requirements
-
-* Python 3.10+
-* sdrtrunk (recording enabled) https://github.com/Dsheirer/sdrtrunk/releases
-* Linux (recommended)
-
-Python dependencies:
-
-```
-fastapi
-uvicorn
-python-jose
-pyyaml
-mutagen
-inotify-simple
-```
-
----
-
-## ⚙️ Installation
-
-### 1. Clone the repository
-
-```
-git clone https://github.com/tomatoleg/QueueScan.git
-cd QueueScan
-```
-
-### 2. Install dependencies
-
-```
-pip install -r requirements.txt
-```
-
-### 3. Configure the application
-
-Copy the example config:
-
-```
-cp config/config.example.yaml config/config.yaml
-```
-
-Edit the config file:
-
-* Set your sdrtrunk recordings path
-* Generate a secure secret key
-
-### Generate a secret key
-
-```
-python -c "import secrets; print(secrets.token_hex(32))"
-or from the command line:  openssl rand -hex 32
-```
-
----
-
-## ▶️ Running the App
-
-```
-python backend/QueueScan.py
-```
-
-Then open:
-
-```
-http://localhost:8080
-```
-
----
-
-## 🔧 Configuration Overview
-
-Key settings in `config.yaml`:
-
-* `paths.recordings` → sdrtrunk recordings directory
-* `auth.secret_key` → JWT signing key
-* `limits.max_history` → number of calls stored
-* `limits.max_active` → active talkgroups displayed
-
----
-
-## 📡 talkgroups.json
-
-`talkgroups.json` defines how numeric talkgroup IDs (TGIDs) are translated into meaningful, structured data within QueueScan.
-
-### 🧠 Purpose
-
-sdrtrunk outputs activity using **raw talkgroup IDs only**. These IDs (e.g., `101`, `3021`) are not human-friendly and contain no inherent context.
-
-`talkgroups.json` provides a lightweight mapping layer that enriches those IDs with:
-
-- A **display name**
-- A **category** (`law`, `fire`, `ems`, `other`)
-
----
-
-### ⚙️ How it works
-
-When a call is processed, QueueScan:
-
-1. Extracts the TGID from the recording filename  
-2. Looks up the TGID in `talkgroups.json`  
-3. Applies the mapped metadata to the call  
-
-This enriched data is then used throughout the application.
-
----
-
-### 🎯 What it affects
-
-The data in `talkgroups.json` drives multiple parts of the system:
-
-- **UI display** — human-readable talkgroup names  
-- **Color coding** — category-based styling (law/fire/EMS/etc.)  
-- **Filtering** — talkgroup lock/filter behavior  
-- **Priority logic** — playback ordering  
-- **Activity tracking** — grouping and counters  
-
----
-
-### 📄 Example
-
-```json
-{
-  "101": {
-    "name": "Sheriff Dispatch",
-    "category": "law"
-  },
-  "102": {
-    "name": "Fire Dispatch",
-    "category": "fire"
-  }
-}
----
-
-## 📁 Project Structure
-
-```
-QueueScan/
-├── backend/
-│   └── QueueScan.py
-├── frontend/
-│   └── QueueScan.html
-├── config/
-│   ├── config.example.yaml
-│   ├── talkgroups.json
-│   └── users.json
-├── static/
-├── logs/
-```
-
----
-
-## ⚠️ Disclaimer
-
-This is a personal project provided as-is. No guarantees, no support, but feel free to experiment and improve it.
-
----
-
-## 💡 Future Ideas
-
-
-* Mobile UI improvements
-* Cloud deployment options
-* Public demo mode
-
----
-# QueueScan — High-Level System Overview
-
-> QueueScan is a full-stack scanner monitoring platform that combines SDR radio systems, backend processing, metadata enrichment, live audio streaming, and a React frontend into a real-time situational awareness console.
-
----
-
-# 🧠 What QueueScan Does
-
-QueueScan receives scanner calls from a radio monitoring system and transforms them into a live operator experience.
-
-Instead of simply playing audio, QueueScan provides:
-
-* 🎧 Intelligent audio playback
-* 📡 Talkgroup awareness
-* 🧠 Priority handling
-* 🔁 Replay capability
-* 📺 TV mode monitoring
-* 🔐 Authentication
-* 📊 Queue visualization
-* 🛰 Metadata enrichment
-
----
-
-# 🏗 Full System Architecture
-
-```text
-┌─────────────────────────────┐
-│        Radio System         │
-│ sdrtrunk / OP25 / P25 Feed │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│      Scanner Recordings     │
-│  MP3 Calls + Event Metadata │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│      QueueScan Backend      │
-│           FastAPI           │
-└──────────────┬──────────────┘
-               │
-      ┌────────┴─────────┐
-      │                  │
-      ▼                  ▼
- REST API          WebSocket Updates
-      │                  │
-      └────────┬─────────┘
-               ▼
-┌─────────────────────────────┐
-│     QueueScan Frontend      │
-│        React + Vite         │
-└─────────────────────────────┘
-```
-
----
-
-# 📡 Radio Layer
-
-QueueScan begins with radio monitoring.
-
-Supported sources:
-
-* sdrtrunk
-* OP25
-* P25 systems
-* trunked radio systems
-
-The radio system generates:
-
-* MP3 call recordings
-* Talkgroup IDs
-* Radio IDs
-* Frequency
-* Time
-* Encryption status
-
----
-
-# 🎙 Scanner Recording Layer
-
-Each scanner call becomes a recording.
-
-Example:
-
-```text
-20260426_160436_Palmetto-800_Richland_T-Control__TO_25667_FROM_2405422.mp3
-```
-
-This contains:
-
-* time
-* source
-* talkgroup
-* radio ID
-* system
-
-QueueScan uses recordings as the source of truth.
-
----
-
-# ⚙️ QueueScan Backend
-
-The backend is built with FastAPI.
-
-Primary role:
-
-> Convert raw scanner events into structured live data.
-
----
-
-# Backend Responsibilities
-
-## 1️⃣ Monitor Scanner Activity
-
-Backend watches for:
-
-* new recordings
-* metadata changes
-* call completion
-
----
-
-## 2️⃣ Parse Calls
-
-Extracts:
-
-* TGID
-* radio ID
-* timestamps
-* frequency
-* encryption
-
----
-
-## 3️⃣ Metadata Enrichment
-
-Backend loads:
-
-```text
-backend/config/talkgroups.json
-```
-
-This provides:
-
-* label
-* agency
-* category
-* priority
-* TV eligibility
-* filtering defaults
-
----
-
-# Example Metadata
-
-```json
-{
-  "25667": {
-    "label": "Columbia Police North",
-    "agency": "Columbia Police",
-    "priority": 4,
-    "listen": true,
-    "tv": false
-  }
-}
-```
-
----
-
-# 4️⃣ Build Live Call Object
-
-Backend creates a normalized object.
-
-Example:
-
-```json
-{
-  "tgid": "25667",
-  "label": "Columbia Police North",
-  "agency": "Columbia Police",
-  "priority": 4,
-  "radio": "2405422",
-  "time": "16:04:36",
-  "file": "recording.mp3"
-}
-```
-
----
-
-# 5️⃣ Serve API
-
-Backend exposes REST endpoints.
-
-Examples:
-
-```text
-/login
-/api/talkgroups
-/api/history
-/api/queue
-```
-
----
-
-# 6️⃣ Push WebSocket Updates
-
-QueueScan uses WebSockets for real-time events.
-
-```text
-ws://HOST:8080/ws
-```
-
-This pushes:
-
-* new calls
-* queue changes
-* playback updates
-* metadata updates
-
----
-
-# 🌐 REST API Layer
-
-Used for:
-
-* login
-* metadata
-* talkgroups
-* queue history
-* replay
-
----
-
-# 📡 WebSocket Layer
-
-WebSocket is the heartbeat of QueueScan.
-
-Without WebSocket:
-
-```text
-no live updates
-no queue updates
-no playback synchronization
-```
-
----
-
-# 🖥 Frontend Layer
-
-Frontend is built using:
-
-* React
-* Vite
-* Zustand
-* Tailwind
-
-Primary role:
-
-> Turn backend events into an operator experience.
-
----
-
-# Frontend Responsibilities
-
-## Queue Management
-
-Stores:
-
-* active queue
-* replay queue
-* playback state
-* history
-
----
-
-## Audio Playback
-
-Frontend controls:
-
-* playback queue
-* replay playback
-* autoplay
-* live audio
-
----
+# Features
+
+## Live Monitoring
+
+* Real-time call queue
+* WebSocket updates from backend
+* Live call playback
+* Active call tracking
+* Queue health monitoring
+
+## Replay Engine
+
+* Replay by talkgroup
+* Replay history panel
+* Replay queue injection
+* Audio replay sequencing
+* Token-authenticated playback
+
+## Queue Intelligence
+
+* Priority-aware queue ordering
+* Talkgroup grouping
+* Queue aging
+* Delay tracking
+* Critical queue visibility
 
 ## TV Mode
 
-Large-format monitoring layout.
+* Large-font display mode
+* Passive monitoring dashboard
+* Chromium kiosk compatible
+* Optimized for mounted displays
 
-Features:
+## Deployment Ready
 
-* large text
-* simplified layout
-* readability from distance
-* auto-login support
+* Docker support
+* Docker Compose
+* Nginx reverse proxy
+* API proxy routing
+* WebSocket proxy support
 
 ---
 
-## Authentication
-
-Login flow:
+# Architecture
 
 ```text
-Login
- ↓
-JWT Token
- ↓
-Stored locally
- ↓
-Used for backend access
+Browser
+   ↓
+Nginx Reverse Proxy
+   ├── / → React Frontend
+   ├── /api → FastAPI Backend
+   └── /ws → WebSocket Proxy
+
+FastAPI Backend
+   ├── REST API
+   ├── WebSocket Events
+   ├── Replay Engine
+   ├── Talkgroup Metadata
+   └── Audio Queue
 ```
 
 ---
 
-# 🧠 Zustand Store
-
-QueueScan uses Zustand as the central state manager.
-
-File:
-
-```text
-frontend/src/store/useScannerStore.js
-```
-
-Handles:
-
-* queue
-* audio
-* filters
-* priorities
-* replay
-* talkgroups
-* TV mode
-
----
-
-# 🔁 Queue Lifecycle
-
-```text
-Scanner call occurs
-        ↓
-Backend enriches metadata
-        ↓
-WebSocket push
-        ↓
-Frontend receives update
-        ↓
-Call enters queue
-        ↓
-Priority sorting
-        ↓
-Audio playback
-        ↓
-Call removed
-```
-
----
-
-# 🎯 Priority System
-
-QueueScan determines priority using:
-
-```text
-Local Override
-      ↓
-Talkgroup Metadata
-      ↓
-Backend Priority
-      ↓
-Fallback Default
-```
-
----
-
-# 🎯 Filtering System
-
-QueueScan can filter based on:
-
-* manual selection
-* metadata
-* TV mode
-* listen flags
-
----
-
-# 📺 TV Mode Flow
-
-```text
-TV Browser
-      ↓
-Auto-login guest
-      ↓
-TV layout
-      ↓
-Large audio player
-      ↓
-Queue visibility
-```
-
-Launch:
-
-```text
-http://HOST:5173?mode=tv
-```
-
----
-
-# 🧩 File Relationships
-
-```text
-backend/QueueScan.py
-        ↓
-backend/config/talkgroups.json
-        ↓
-/api/talkgroups
-        ↓
-frontend/useScannerStore
-        ↓
-AudioPlayer + QueuePanel
-```
-
----
-
-# 📁 Repository Structure
+# Project Structure
 
 ```text
 QueueScan/
 ├── backend/
 │   ├── QueueScan.py
+│   ├── requirements.txt
+│   ├── Dockerfile
 │   ├── config/
 │   ├── logs/
 │   └── static/
 │
 ├── frontend/
 │   ├── src/
-│   ├── public/
-│   └── vite.config.js
+│   │   ├── components/
+│   │   ├── services/
+│   │   ├── store/
+│   │   ├── utils/
+│   │   └── config.js
+│   │
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   ├── rebuild.sh
+│   └── package.json
 │
-├── utilities/
-├── backups/
-└── README.md
+├── docker-compose.yml
+├── docker-compose.dev.yml
+├── README.md
+└── .gitignore
 ```
 
 ---
 
-# 🔄 Full Data Flow
+# Frontend Stack
+
+* React
+* Vite
+* Zustand
+* TailwindCSS
+* WebSockets
+
+---
+
+# Backend Stack
+
+* FastAPI
+* Uvicorn
+* PyYAML
+* WebSockets
+* JWT Authentication
+* File-backed metadata
+
+---
+
+# Screenshots
+
+## Dashboard
+
+![Dashboard](./docs/screenshots/dashboard-overview.png)
+
+## Queue Timeline
+
+![Queue Timeline](./docs/screenshots/queue-panel.png)
+
+## History Replay
+
+![History Replay](./docs/screenshots/history-panel.png)
+
+## TV Mode
+
+![TV Mode](./docs/screenshots/tv-mode.png)
+
+---
+
+# Backend Configuration
+
+Configuration is YAML-driven.
+
+Location:
 
 ```text
-Scanner → Recording → Backend → Metadata → WebSocket → Frontend → Queue → Audio
+backend/config/config.yaml
+```
+
+Example:
+
+```yaml
+app:
+  name: QueueScan
+  version: 1.0
+
+network:
+  lan_prefix: "192.168.1"
+  require_lan_login: false
+
+paths:
+  talkgroups: config/talkgroups.json
+  users: config/users.json
+  logs: logs/queuescan.log
 ```
 
 ---
 
-# 🚀 Why QueueScan Is Different
+# Docker Deployment
 
-Traditional scanner apps:
+## Start QueueScan With Docker
 
-* passive listening
-* minimal metadata
-* no prioritization
+From the QueueScan project root:
 
-QueueScan provides:
-
-* live awareness
-* intelligent queueing
-* replay
-* metadata enrichment
-* TV mode
-* persistence
+```bash
+cd QueueScan
+```
 
 ---
 
-# 🧠 QueueScan Philosophy
+## First-Time Build
 
-QueueScan is not a media player.
+Build frontend, backend, nginx, and supporting containers:
 
-QueueScan is:
+```bash
+docker compose up --build -d
+```
 
-> A live scanner operations console.
+This will:
 
-Designed for:
-
-* monitoring stations
-* radio hobbyists
-* command centers
-* passive surveillance
-* situational awareness
-
----
-
-# ✅ System Summary
-
-QueueScan combines:
-
-* SDR radio monitoring
-* FastAPI backend
-* metadata engine
-* WebSocket synchronization
-* React frontend
-* queue playback
-* authentication
-* TV mode
-
-Into one real-time monitoring platform.
-
-
+* Build the backend container
+* Build the frontend container
+* Start nginx reverse proxy
+* Start QueueScan API + WebSocket services
+* Connect services through Docker networking
 
 ---
 
-## 📜 License
+## Verify Containers
 
-MIT (or your preferred license)
+Check running containers:
+
+```bash
+docker compose ps
+```
+
+Expected services:
+
+```text
+queuescan-backend
+queuescan-frontend
+queuescan-nginx
+```
+
+---
+
+## View Logs
+
+View all logs:
+
+```bash
+docker compose logs -f
+```
+
+View backend only:
+
+```bash
+docker compose logs -f backend
+```
+
+View frontend only:
+
+```bash
+docker compose logs -f frontend
+```
+
+---
+
+## Restart Containers
+
+```bash
+docker compose restart
+```
+
+Restart a single service:
+
+```bash
+docker compose restart backend
+```
+
+---
+
+## Stop QueueScan
+
+```bash
+docker compose down
+```
+
+---
+
+## Full Rebuild
+
+Use when dependencies or Dockerfiles change:
+
+```bash
+docker compose down
+docker compose up --build -d
+```
+
+---
+
+## Remove Old Containers + Volumes
+
+Use only when you want a clean reset:
+
+```bash
+docker compose down -v
+```
+
+---
+
+## Access QueueScan
+
+Once containers are running:
+
+```text
+http://localhost
+```
+
+LAN example:
+
+```text
+http://192.168.1.20
+```
+
+Tailscale example:
+
+```text
+https://your-host.tailnet.ts.net
+```
+
+---
+
+## Typical Docker Workflow
+
+```bash
+docker compose up --build -d
+docker compose logs -f
+docker compose restart backend
+docker compose down
+```
+
+---
+
+# Nginx Proxy Routing
+
+QueueScan uses reverse proxy routing.
+
+## Routes
+
+| Route    | Target          |
+| -------- | --------------- |
+| `/`      | Frontend        |
+| `/api/*` | FastAPI Backend |
+| `/ws`    | WebSocket       |
+
+---
+
+# Frontend Build + Deploy
+
+QueueScan includes a rebuild helper.
+
+```bash
+cd frontend
+./rebuild.sh
+```
+
+Typical rebuild script:
+
+```bash
+npm run build
+sudo rm -rf /usr/share/nginx/html/*
+sudo cp -r dist/* /usr/share/nginx/html/
+sudo systemctl restart nginx
+```
+
+---
+
+# Development
+
+## Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend default:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## Backend
+
+```bash
+cd backend
+python QueueScan.py
+```
+
+Backend default:
+
+```text
+http://localhost:8080
+```
+
+---
+
+# Environment Variables
+
+Frontend `.env`
+
+```env
+VITE_APP_NAME=QueueScan
+VITE_DEFAULT_VOLUME=1.0
+```
+
+---
+
+# API Structure
+
+## REST
+
+```text
+/api/talkgroups
+/api/history
+/api/replay/{tgid}
+/api/call/{filename}
+```
+
+---
+
+## WebSocket
+
+```text
+/ws?token=JWT_TOKEN
+```
+
+---
+
+# Queue Flow
+
+```text
+Incoming Call
+      ↓
+WebSocket Event
+      ↓
+Queue Store
+      ↓
+Grouped Queue
+      ↓
+Audio Player
+      ↓
+History Storage
+```
+
+---
+
+# Security
+
+QueueScan supports:
+
+* JWT token authentication
+* LAN login restriction
+* Token-authenticated replay
+* Config-driven access control
+
+---
+
+# Git Ignore Recommendations
+
+Do NOT commit:
+
+```text
+backend/config/config.yaml
+backend/config/users.json
+backend/config/talkgroups.json
+backend/logs/
+backend/recordings/
+frontend/node_modules/
+frontend/dist/
+```
+
+---
+
+# Recommended Future Enhancements
+
+* Conversation locking by TGID
+* Queue virtualization
+* Analytics dashboard
+* Multi-node ingest
+* VPS deployment templates
+* User roles / permissions
+* Database-backed history
+* Multi-scanner federation
+
+---
+
+# License
+
+Add your preferred license here.
+
+Examples:
+
+* MIT
+* GPLv3
+* Apache 2.0
+
+---
+
+# Author
+
+**QueueScan**
+
+Designed for real-time SDR / scanner monitoring workflows.
+

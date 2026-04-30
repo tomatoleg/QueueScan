@@ -1,42 +1,50 @@
 import { ensureToken } from "./auth";
 import { config } from "../config";
+import { debug } from "../utils/debug";
 
 export async function connectWS(onMessage) {
-  const protocol =
-    window.location.protocol === "https:" ? "wss" : "ws";
-
-  const backendHost = config.backendUrl
-    .replace("http://", "")
-    .replace("https://", "");
-
   const token = await ensureToken();
-
-  console.log("WS TOKEN:", token);
 
   if (!token) {
     console.error("No token available");
     return null;
   }
 
-  const ws = new WebSocket(
-    `${protocol}://${backendHost}${config.websocketPath}?token=${encodeURIComponent(token)}`
-  );
+  const protocol =
+    window.location.protocol === "https:"
+      ? "wss"
+      : "ws";
+
+  const wsUrl =
+    `${protocol}://${window.location.host}${config.websocketPath}?token=${encodeURIComponent(token)}`;
+
+  debug("WS URL:", wsUrl);
+
+  const ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
-    console.log("QueueScan WS Connected");
+    debug("QueueScan WS Connected");
   };
 
   ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    onMessage(data);
+    try {
+      const data = JSON.parse(event.data);
+      onMessage(data);
+    } catch (err) {
+      console.error("WS parse error:", err);
+    }
   };
 
   ws.onclose = (event) => {
-    console.log("WS disconnected", {
+    debug("WS disconnected", {
       code: event.code,
       reason: event.reason,
       clean: event.wasClean,
     });
+  };
+
+  ws.onerror = (err) => {
+    console.error("WebSocket error:", err);
   };
 
   return ws;

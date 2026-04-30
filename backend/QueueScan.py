@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import asyncio
 import json
 import re
@@ -19,16 +20,37 @@ import yaml
 import uvicorn
 from mutagen.mp3 import MP3
 from inotify_simple import INotify, flags
+from fastapi.responses import JSONResponse
+
 
 # ============================================================
 # CONFIGURATION & PATHS
 # ============================================================
 
-BASE_DIR = Path(__file__).parent
-CONFIG_FILE = BASE_DIR / "config/config.yaml"
 
-if not CONFIG_FILE.exists():
-    raise RuntimeError("Missing config/config.yaml")
+
+BASE_DIR = Path(__file__).resolve().parent
+
+# Detect Docker vs local
+if (BASE_DIR / "config").exists():
+    PROJECT_ROOT = BASE_DIR
+else:
+    PROJECT_ROOT = BASE_DIR.parent
+
+CONFIG_DIR = PROJECT_ROOT / "config"
+
+CONFIG_FILE = CONFIG_DIR / "config.yaml"
+USER_FILE = CONFIG_DIR / "users.json"
+TG_FILE = CONFIG_DIR / "talkgroups.json"
+
+
+
+#BASE_DIR = Path(__file__).parent
+#CONFIG_DIR = BASE_DIR.parent / "config"
+#CONFIG_FILE = CONFIG_DIR / "config.yaml"
+
+#if not CONFIG_FILE.exists():
+#    raise RuntimeError("Missing config/config.yaml")
 
 with open(CONFIG_FILE) as f:
     CONFIG = yaml.safe_load(f)
@@ -42,24 +64,57 @@ SECRET_KEY = CONFIG["auth"]["secret_key"]
 TOKEN_EXPIRE_HOURS = CONFIG["auth"]["token_expire_hours"]
 ALGORITHM = CONFIG["server"]["algorithm"]
 
-RECORD_DIR = Path(CONFIG["paths"]["recordings"])
+
+
+def resolve_path(path: str) -> Path:
+    # Detect Docker environment
+    if os.environ.get("RUNNING_IN_DOCKER") == "1":
+        # Map host recordings path → container recordings path
+        if path.startswith("/home/trey/SDRTrunk/recordings"):
+            return Path("/app/recordings")
+    return Path(path)
+
+
+# ============================================================
+# CONFIGURATION & PATHS
+# ============================================================
+
+config_paths = CONFIG["paths"]
+
+# Resolve recordings path depending on environment (Docker vs local)
+RECORDINGS_DIR = resolve_path(config_paths["recordings"])
 
 REQUIRE_LAN_LOGIN = CONFIG["network"].get("require_lan_login", False)
-TG_FILE = BASE_DIR / CONFIG["paths"]["talkgroups"]
-USER_FILE = BASE_DIR / CONFIG["paths"]["users"]
-HTML_FILE = BASE_DIR / CONFIG["paths"]["html"]
-LOG_FILE = BASE_DIR / CONFIG["paths"]["logs"]
+#TG_FILE = BASE_DIR.parent / CONFIG["paths"]["talkgroups"]
+#USER_FILE = BASE_DIR.parent / CONFIG["paths"]["users"]
+HTML_FILE = BASE_DIR.parent / CONFIG["paths"]["html"]
+LOG_FILE = BASE_DIR.parent / CONFIG["paths"]["logs"]
 STATIC_DIR = BASE_DIR / CONFIG["paths"]["static"]
+
 APP_NAME = CONFIG.get("app", {}).get("name", "QueueScan")
 APP_VERSION = CONFIG["app"]["version"]
 LAN_PREFIX = CONFIG["network"]["lan_prefix"]
 SESSION_TIMEOUT = CONFIG["session"]["timeout"]
 MAX_HISTORY = CONFIG["limits"]["max_history"]
 MAX_ACTIVE = CONFIG["limits"]["max_active"]
-CORS_ORIGINS = CONFIG.get("cors", {}).get(
-    "allow_origins",
-    []
-)
+CORS_ORIGINS = CONFIG.get("cors", {}).get("allow_origins", [])
+
+
+print("===========================================")
+print(" QueueScan Startup Configuration")
+print("===========================================")
+print(f"Running in Docker: {os.environ.get('RUNNING_IN_DOCKER') == '1'}")
+print(f"Recordings Directory: {RECORDINGS_DIR}")
+print(f"Talkgroups File: {TG_FILE}")
+print(f"Users File: {USER_FILE}")
+print(f"HTML Template: {HTML_FILE}")
+print(f"Log File: {LOG_FILE}")
+print(f"Static Directory: {STATIC_DIR}")
+print("===========================================")
+
+
+
+
 
 
 # ============================================================
@@ -77,6 +132,7 @@ processed_files = set()
 # ============================================================
 # HELPERS & DATA LOADING
 # ============================================================
+
 def log_event(msg):
     with open(LOG_FILE, "a") as f:
         f.write(msg + "\n")
@@ -165,12 +221,12 @@ async def wait_for_complete_file(path, checks=6, delay=0.4):
 # ============================================================
 async def watch_recordings():
     inotify = INotify()
-    inotify.add_watch(str(RECORD_DIR), flags.CLOSE_WRITE)
+    inotify.add_watch(str(RECORDINGS_DIR), flags.CLOSE_WRITE)
     while True:
         for event in inotify.read(timeout=1000):
             if not event.name.endswith(".mp3") or event.name in processed_files:
                 continue
-            file_path = RECORD_DIR / event.name
+            file_path = RECORDINGS_DIR / event.name
             processed_files.add(event.name)
             try:
                 if await wait_for_complete_file(file_path):
@@ -304,7 +360,7 @@ def verify(token: str = Query(None)):
 
     return {"user": user}
 
-@app.get("/api/talkgroups")
+@app.get("/talkgroups")
 def get_reload_talkgroups():
     if not TG_FILE.exists():
         raise HTTPException(status_code=500, detail="talkgroups.json not found")
@@ -312,9 +368,6 @@ def get_reload_talkgroups():
     with open(TG_FILE) as f:
         return json.load(f)
 
-@app.get("/api/talkgroups")
-def get_talkgroups():
-    return TG_MAP
 
 @app.post("/login")
 def login(data: LoginRequest, request: Request):
@@ -325,7 +378,10 @@ def login(data: LoginRequest, request: Request):
         raise HTTPException(status_code=401)
     log_event(f"[LOGIN SUCCESS] {datetime.now()} user={data.username} ip={ip}")
     token = jwt.encode({"sub": data.username, "exp": datetime.utcnow() + timedelta(hours=24)}, SECRET_KEY, algorithm=ALGORITHM)
-    return {"access_token": token}
+    response = JSONResponse({"access_token": token})
+    response.set_cookie("token", token, httponly=False)
+    return response
+#   return {"access_token": token}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, token: str = Query(None)):
@@ -408,7 +464,7 @@ async def root(request: Request):
 
 @app.get("/call/{f}")
 async def serve_audio(f: str, token: str = Query(None)):
-    path = RECORD_DIR / f
+    path = RECORDINGS_DIR / f
     return FileResponse(path, media_type="audio/mpeg")
 
 if __name__ == "__main__":

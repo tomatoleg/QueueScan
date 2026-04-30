@@ -1,40 +1,49 @@
 import { useScannerStore } from "../store/useScannerStore";
 import { config } from "../config";
-
+import { apiFetch } from "../services/api";
 
 export default function HistoryPanel() {
+  console.log("HistoryPanel Loaded NEW VERSION");
+
   const history = useScannerStore((s) => s.history);
   const currentCall = useScannerStore((s) => s.currentCall);
   const enqueueReplay = useScannerStore((s) => s.enqueueReplay);
   const popReplay = useScannerStore((s) => s.popReplay);
-  const backendHost = config.backendUrl.replace("http://", "");
-
 
   const replayTalkgroup = async (tgid) => {
     try {
-      const res = await fetch(
-        `http://${backendHost}/replay/${tgid}`
-      );
+      const token = localStorage.getItem("token");
+
+      const replayUrl =
+        `${config.replayPath}/${tgid}`;
+
+      debug("History Panel Replay URL:", replayUrl);
+
+      const res = await apiFetch(replayUrl);
+
+      if (!res.ok) {
+        throw new Error(
+          `Replay request failed: ${res.status}`
+        );
+      }
 
       const data = await res.json();
 
-      const token = localStorage.getItem("token");
-
       const replayUrls = data.map((call) => ({
-          url: `http://${backendHost}/call/${call.file}?token=${token}`,
-          call,
-        }));
+        url:
+          `${config.backendUrl}/call/${call.file}?token=${token}`,
+        call,
+      }));
 
       enqueueReplay(replayUrls);
 
       setTimeout(() => {
         popReplay();
       }, 50);
-
-          } catch (err) {
-            console.error("Replay failed", err);
-          }
-      };
+    } catch (err) {
+      console.error("Replay failed", err);
+    }
+  };
 
   return (
     <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4">
@@ -62,14 +71,14 @@ export default function HistoryPanel() {
 
             <tbody>
               {history.map((row, index) => (
-                  <tr
-                     key={`${row.file}-${index}`}
-                     className={`border-b border-zinc-800 hover:bg-zinc-800/50 transition ${
-                       currentCall?.file === row.file
-                         ? "bg-green-900/30 ring-1 ring-green-500"
-                         : ""
-                     }`}
-                   >
+                <tr
+                  key={`${row.file}-${index}`}
+                  className={`border-b border-zinc-800 hover:bg-zinc-800/50 transition ${
+                    currentCall?.file === row.file
+                      ? "bg-green-900/30 ring-1 ring-green-500"
+                      : ""
+                  }`}
+                >
                   <td className="py-2">
                     {row.time}
                   </td>
@@ -96,7 +105,9 @@ export default function HistoryPanel() {
 
                   <td className="py-2">
                     <button
-                      onClick={() => replayTalkgroup(row.tgid)}
+                      onClick={() =>
+                        replayTalkgroup(row.tgid)
+                      }
                       className="px-2 py-1 rounded bg-zinc-700 hover:bg-zinc-600 transition"
                     >
                       ▶

@@ -1,3 +1,5 @@
-export async function apiFetch(path, opts={}) {
-  return fetch(`${config.backendUrl}${path}`, opts);
+import { config } from "../config";
+
+export async function apiFetch(path, options = {}) {
+  return fetch(`${config.backendUrl}${path}`, options);
 }

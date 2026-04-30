@@ -11,6 +11,11 @@ backend/config/users.json
 backend/config/talkgroups.json
 backend/config/talkgroups_sanitized.json
 
+config/config.yaml
+config/config.json
+config/users.json
+talkgroups.json
+talkgroups_sanitized.json
 # Logs
 backend/logs/*
 !backend/logs/.gitkeep
@@ -30,6 +35,7 @@ frontend/.vite/
 backups/
 *.save
 *.bak
+*.zip
 
 # OS
 .DS_Store

@@ -136,14 +136,7 @@ shouldProcessCall: (call) => {
      2
    );
 
-  console.log(
-  "TG",
-  tgid,
-  "Priority:",
-  priority,
-  "TG Meta:",
-  tgMeta
-);
+//  console.log( "TG", tgid, "Priority:", priority, "TG Meta:", tgMeta);
 
 
   if (priority <= 0) {

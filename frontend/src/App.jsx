@@ -11,17 +11,19 @@ import Login from "./components/Login";
 import { useAuthStore } from "./store/useAuthStore";
 import TVLayout from "./components/TVLayout";
 import { fetchTalkgroups } from "./services/talkgroups";
+import { debug } from "./utils/debug";
+import { apiFetch } from "./services/api";
 
 
 export default function App() {
-  console.log("App render");
+  debug("App render");
 
   const isAuthenticated = useAuthStore(
     (s) => s.isAuthenticated
   );
 
-  console.log("AUTH STATE:", isAuthenticated);
-  console.log("TOKEN:", localStorage.getItem("token"));
+  debug("AUTH STATE:", isAuthenticated);
+  debug("TOKEN:", localStorage.getItem("token"));
 
   const updateData = useScannerStore((s) => s.updateData);
   const tvMode = useScannerStore((s) => s.tvMode);
@@ -41,7 +43,7 @@ export default function App() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    console.log("App mounted");
+    debug("App mounted");
 
     async function initWS() {
       if (wsRef.current) return;
@@ -49,13 +51,13 @@ export default function App() {
 
       setTalkgroups(tgData);
 
-      console.log(
+      debug(
         "Talkgroups loaded:",
         Object.keys(tgData).length
       );
 
       const ws = await connectWS((msg) => {
-        //console.log("WS MESSAGE:", msg);
+        //debug("WS MESSAGE:", msg);
 
         if (msg.type === "full_update") {
           updateData(msg);

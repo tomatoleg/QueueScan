@@ -56,7 +56,7 @@ export default function AudioPlayer() {
 
 useEffect(() => {
   if (currentCall) {
-    console.log("CURRENT CALL OBJECT:", currentCall);
+    //console.log("CURRENT CALL OBJECT:", currentCall);
   }
 }, [currentCall]);
 

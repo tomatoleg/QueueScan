@@ -1,4 +1,5 @@
 import { config } from "../config";
+import { apiFetch } from "../services/api";
 
 function isTokenExpired(token) {
   try {
@@ -33,14 +34,14 @@ export async function OLDensureToken() {
       return token;
     }
 
-    console.log("Token expired — requesting new token");
+    debug("Token expired — requesting new token");
 
     localStorage.removeItem("token");
     token = null;
   }
 
   try {
-    const res = await fetch(`${config.backendUrl}/login`, {
+    const res = await apiFetch("/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -61,11 +62,11 @@ export async function OLDensureToken() {
 
     localStorage.setItem("token", token);
 
-    console.log("New token acquired");
+    debug("New token acquired");
 
     return token;
   } catch (err) {
-    console.error("Token fetch failed", err);
+    console.error("Token apiFetch failed", err);
     return null;
   }
 }
