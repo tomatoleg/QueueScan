@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+PyYAML
+aiofiles
+watchdog
+websockets
+jinja2
+python-dotenv
+mutagen
+inotify-simple
