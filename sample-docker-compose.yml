@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  backend:
+    container_name: queuescan-backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/app/config:ro
+      - ./recordings:/app/recordings
+      - ./logs:/app/logs
+  frontend:
+    container_name: queuescan-frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+
