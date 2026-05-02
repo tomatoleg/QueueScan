@@ -10,8 +10,23 @@ export default defineConfig({
 
   server: {
     host: true,
+
     allowedHosts: [
       "fedora.tail33111d.ts.net",
     ],
+
+    proxy: {
+      "/api": {
+        target: "http://backend-dev:8080",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+
+      "/ws": {
+        target: "ws://backend-dev:8080",
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
 });

@@ -374,7 +374,7 @@ useEffect(() => {
               </div>
 
               <div className="text-4xl font-semibold opacity-40">
-                Scanning...
+                Scanning....
               </div>
             </div>
           </div>

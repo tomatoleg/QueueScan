@@ -1,7 +1,11 @@
+console.log("QUEUE PANEL MODULE LOADED 1", import.meta.url, Date.now());
+
 import { useEffect, useState } from "react";
 import { useScannerStore } from "../store/useScannerStore";
 
 export default function QueuePanel() {
+  console.log("QUEUE PANEL RENDER", Date.now());
+
   const queue = useScannerStore((s) => s.queue);
   const currentCall = useScannerStore((s) => s.currentCall);
   const talkgroups = useScannerStore((s) => s.talkgroups);
@@ -43,11 +47,11 @@ export default function QueuePanel() {
   const groupedEntries = Object.entries(groupedQueue).sort(
     (a, b) => {
       const aPriority = Math.max(
-        ...a[1].map((c) => c.priority || 0)
+        ...a[1].map((c) => c.priority ?? 0)
       );
 
       const bPriority = Math.max(
-        ...b[1].map((c) => c.priority || 0)
+        ...b[1].map((c) => c.priority ?? 0)
       );
 
       return bPriority - aPriority;
@@ -58,19 +62,14 @@ export default function QueuePanel() {
     switch (priority) {
       case 5:
         return "bg-red-600";
-
       case 4:
         return "bg-orange-600";
-
       case 3:
         return "bg-yellow-600";
-
       case 2:
         return "bg-zinc-600";
-
       case 1:
         return "bg-zinc-700";
-
       default:
         return "bg-zinc-800";
     }
@@ -144,6 +143,10 @@ export default function QueuePanel() {
           const first = calls[0];
           const tgMeta = talkgroups[tgid] || {};
 
+          const maxPriority = Math.max(
+            ...calls.map((c) => c.priority ?? 2)
+          );
+
           return (
             <div
               key={tgid}
@@ -154,6 +157,7 @@ export default function QueuePanel() {
                   <div>
                     <div className="font-semibold text-sm">
                       {tgMeta.label ||
+                        first.call?.talkgroup_name ||
                         first.talkgroup_name ||
                         first.talkgroup}
                     </div>
@@ -165,19 +169,10 @@ export default function QueuePanel() {
 
                   <div
                     className={`text-xs px-2 py-1 rounded font-medium ${getPriorityColor(
-                      Math.max(
-                        ...calls.map(
-                          (c) => c.priority ?? 2
-                        )
-                      )
+                      maxPriority
                     )}`}
                   >
-                    P
-                    {Math.max(
-                      ...calls.map(
-                        (c) => c.priority ?? 2
-                      )
-                    )}
+                    P{maxPriority}
                   </div>
                 </div>
               </div>
@@ -194,9 +189,19 @@ export default function QueuePanel() {
                   const isActive =
                     currentCall?.file === item.file;
 
+                  const tgName =
+                    item.call?.talkgroup_name ||
+                    item.talkgroup_name ||
+                    item.talkgroup;
+
+                  const radio =
+                    item.call?.radio ||
+                    item.radio ||
+                    "Unknown";
+
                   return (
                     <div
-                      key={item.file}
+                      key={item.file || `${tgid}-${index}`}
                       className={`p-3 transition ${
                         isActive
                           ? "bg-green-500/10 ring-1 ring-green-500"
@@ -211,7 +216,7 @@ export default function QueuePanel() {
                             </div>
 
                             <div className="text-sm font-medium">
-                              {item.radio || "Unknown"}
+                              {tgName} • Radio {radio}
                             </div>
 
                             {isActive && (

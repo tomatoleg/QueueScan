@@ -10,18 +10,15 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ../config:/app/config:ro
-      - ../recordings:/app/recordings
-      - ../logs:/app/logs
-
+      - ./config:/app/config:ro
+      - ./recordings:/app/recordings
+      - ./logs:/app/logs
   frontend:
     container_name: queuescan-frontend
     build:
       context: .
-      dockerfile: frontend
+      dockerfile: frontend/Dockerfile
     restart: unless-stopped
-    ports:
-      - "80:80"
     depends_on:
       - backend
 
