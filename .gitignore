@@ -24,12 +24,15 @@ backend/logs/*
 backend/recordings/
 *.db
 backend/tokens.json
+docker-compose.yml
+docker-compose.dev.yml
 
 # Frontend
 frontend/node_modules/
 frontend/dist/
 frontend/BACKUP/
 frontend/.vite/
+frontend/vite.config.js
 
 # Temporary
 backups/
