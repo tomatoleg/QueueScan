@@ -323,7 +323,7 @@ useEffect(() => {
       )}
 
       {currentCall ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5 min-h-[88px]">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5 min-h-[88px]">
           <div>
             <div className="text-xs uppercase opacity-50 mb-1">
               Talkgroup
@@ -351,6 +351,16 @@ useEffect(() => {
 
           <div>
             <div className="text-xs uppercase opacity-50 mb-1">
+              Frequency
+            </div>
+
+            <div className="text-lg">
+              {currentCall.frequency || "Unknown"}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs uppercase opacity-50 mb-1">
               TGID
             </div>
 
@@ -366,7 +376,7 @@ useEffect(() => {
 
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5 min-h-[88px]">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5 min-h-[88px]">
           <div className="flex items-center">
             <div>
               <div className="text-xs uppercase opacity-50 mb-1">
@@ -389,6 +399,15 @@ useEffect(() => {
             </div>
           </div>
 
+          <div className="flex items-center opacity-30">
+            <div>
+              <div className="text-xs uppercase opacity-50 mb-1">
+                Frequency
+              </div>
+
+              <div className="text-lg">—</div>
+            </div>
+          </div>
           <div className="flex items-center opacity-30">
             <div>
               <div className="text-xs uppercase opacity-50 mb-1">
