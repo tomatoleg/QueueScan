@@ -1,9 +1,10 @@
 import { useScannerStore } from "../store/useScannerStore";
 import { config } from "../config";
 import { apiFetch } from "../services/api";
+import { debug } from "../utils/debug";
+
 
 export default function HistoryPanel() {
-  console.log("HistoryPanel Loaded NEW VERSION");
 
   const history = useScannerStore((s) => s.history);
   const currentCall = useScannerStore((s) => s.currentCall);

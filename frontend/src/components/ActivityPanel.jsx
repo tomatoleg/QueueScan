@@ -1,6 +1,7 @@
 import { useScannerStore } from "../store/useScannerStore";
 import { config } from "../config";
 import { apiFetch } from "../services/api";
+import { debug } from "../utils/debug";
 
 export default function ActivityPanel() {
   const currentCall = useScannerStore((s) => s.currentCall);

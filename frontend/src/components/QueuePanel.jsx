@@ -1,10 +1,8 @@
-console.log("QUEUE PANEL MODULE LOADED 1", import.meta.url, Date.now());
 
 import { useEffect, useState } from "react";
 import { useScannerStore } from "../store/useScannerStore";
 
 export default function QueuePanel() {
-  console.log("QUEUE PANEL RENDER", Date.now());
 
   const queue = useScannerStore((s) => s.queue);
   const currentCall = useScannerStore((s) => s.currentCall);
