@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useScannerStore } from "../store/useScannerStore";
+import { formatCallTime } from "../utils/time";
 
 export default function QueuePanel() {
 
@@ -225,7 +226,7 @@ export default function QueuePanel() {
                           </div>
 
                           <div className="text-xs opacity-50 mt-1">
-                            {item.time}
+                            {formatCallTime(item.time)}
                           </div>
                         </div>
 

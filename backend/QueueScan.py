@@ -21,6 +21,7 @@ import uvicorn
 from mutagen.mp3 import MP3
 from inotify_simple import INotify, flags
 from fastapi.responses import JSONResponse
+from datetime import timezone
 
 
 # ============================================================
@@ -260,8 +261,15 @@ def parse_call(file_path):
             else:
                 frequency = raw
 
-    ts = datetime.fromtimestamp(file_path.stat().st_mtime)
-    time_str = ts.strftime("%H:%M:%S")
+#   ts = datetime.fromtimestamp(file_path.stat().st_mtime)
+#   time_str = ts.strftime("%H:%M:%S")
+
+    ts = datetime.fromtimestamp(
+        file_path.stat().st_mtime,
+        tz=timezone.utc
+        )
+
+    time_str = ts.isoformat()
     radio_str = f"Unit {radio}" if radio != "Unknown" else "Unknown Unit"
     return {
         "tgid": tg_number,

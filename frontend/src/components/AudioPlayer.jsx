@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useScannerStore } from "../store/useScannerStore";
 import SignalScope from "./SignalScope";
 import { useAuthStore } from "../store/useAuthStore";
+import { formatCallTime } from "../utils/time";
 
 export default function AudioPlayer() {
   const audioRef = useRef(null);
@@ -142,57 +143,27 @@ useEffect(() => {
    }, [audioUnlocked, forceTVMode]);
 
 
-  const XhandleEnded = () => {
-    if (currentCall?.file) {
-      removePlayedCall(currentCall.file);
-    }
-
-    if (replayQueue.length > 0) {
-      popReplay();
-    } else {
-      setCurrentAudio(null);
-    }
-  };
-
-
   const handleEnded = () => {
       const finishedFile = currentCall?.file;
 
-      // Clear audio FIRST so popLive can run
-      setCurrentAudio(null, null, "live");
-    
+      // Remove from history queue
       if (finishedFile) {
         removePlayedCall(finishedFile);
       }
-    
+
+      // If replay is active, continue replay first
       if (replayQueue.length > 0) {
-        setTimeout(() => {
-          popReplay();
-        }, 100);
+        popReplay();
         return;
       }
+
+      // Clear current audio so queue can advance
+      setCurrentAudio(null, null, "live");
     
-      setTimeout(() => {
-        popLive();
-      }, 100);
+      // Immediately pull next call (priority-aware)
+      popLive();
     };
 
-  const ZhandleEnded = () => {
-    if (currentCall?.file) {
-      removePlayedCall(currentCall.file);
-    }
-
-    if (replayQueue.length > 0) {
-      popReplay();
-      return;
-    }
-
-    setCurrentAudio(null);
-  
-    setTimeout(() => {
-      popLive();
-    }, 150);
-  };
 
   const unlockAudio = async () => {
     try {
@@ -220,19 +191,6 @@ useEffect(() => {
     return `+${minutes}m ${remaining}s`;
   };
 
-  const formatCallTime = (timestamp) => {
-    if (!timestamp) return "";
-
-    const d = new Date(timestamp);
-  
-    if (isNaN(d.getTime())) return "";
-  
-    return d.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  };
 
   const oldestItem = queue[0];
 
@@ -368,7 +326,7 @@ useEffect(() => {
               {currentCall.tgid}
             </div>
         <div className="mt-2 text-sm text-zinc-400">
-  {currentCall.time}
+  {formatCallTime(currentCall.time)}
 </div>
 
 

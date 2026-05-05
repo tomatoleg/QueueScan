@@ -2,6 +2,7 @@ import { useScannerStore } from "../store/useScannerStore";
 import { config } from "../config";
 import { apiFetch } from "../services/api";
 import { debug } from "../utils/debug";
+import { formatCallTime } from "../utils/time";
 
 
 export default function HistoryPanel() {
@@ -10,7 +11,6 @@ export default function HistoryPanel() {
   const currentCall = useScannerStore((s) => s.currentCall);
   const enqueueReplay = useScannerStore((s) => s.enqueueReplay);
   const popReplay = useScannerStore((s) => s.popReplay);
-
   const replayTalkgroup = async (tgid) => {
     try {
       const token = localStorage.getItem("token");
@@ -81,7 +81,7 @@ export default function HistoryPanel() {
                   }`}
                 >
                   <td className="py-2">
-                    {row.time}
+                    {formatCallTime(row.time)}
                   </td>
 
                   <td className="py-2">
