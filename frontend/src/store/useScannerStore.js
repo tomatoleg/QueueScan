@@ -42,7 +42,7 @@ export const useScannerStore = create(
       replayQueue: [],
       currentAudio: null,
 
-      // 🔥 NEW QUEUE SYSTEM
+      // 🔥 Queue system
       priorityQueue: [],
       normalQueue: [],
 
@@ -77,30 +77,39 @@ export const useScannerStore = create(
           };
         }),
 
+
       popLive: () =>
         set((state) => {
-          if (state.currentAudio) return {};
-
           let next = null;
           let priorityQueue = state.priorityQueue;
           let normalQueue = state.normalQueue;
-
+      
           if (priorityQueue.length > 0) {
             [next, ...priorityQueue] = priorityQueue;
-
             console.log("PLAYING PRIORITY");
           } else if (normalQueue.length > 0) {
             [next, ...normalQueue] = normalQueue;
-
             console.log("PLAYING NORMAL");
           }
-
+      
           console.log(
             "PLAY:",
             "SEQ:", next?.seq,
-            "PRIORITY:", next?.priority
+            "URL:", next?.url
           );
+      
+console.log(
+  "POP LIVE DECISION:",
+  "priorityQueue:", state.priorityQueue.length,
+  "normalQueue:", state.normalQueue.length
+);
 
+console.log(
+  "PLAY:",
+  "SEQ:", next?.seq,
+  "URL:", next?.url,
+  "TG:", next?.call?.tgid
+);
           return {
             priorityQueue,
             normalQueue,
@@ -233,7 +242,8 @@ export const useScannerStore = create(
                 timestamp: Date.now(),
               };
 
-              if (ruleResult.priority > 1) {
+              const isPriority = ruleResult.priority >= 3;
+              if (isPriority) {
                 updatedPriorityQueue = [
                   ...state.priorityQueue,
                   newItem,
@@ -245,7 +255,6 @@ export const useScannerStore = create(
                 ];
               }
 
-              // 🔍 DEBUG
               console.log(
                 "ENQUEUE:",
                 "SEQ:", newItem.seq,
@@ -269,36 +278,6 @@ export const useScannerStore = create(
             }
           }
 
-          const hasPriority =
-            updatedPriorityQueue.length > 0;
-          const hasNormal =
-            updatedNormalQueue.length > 0;
-
-          const shouldStartLive =
-            !state.currentAudio &&
-            (hasPriority || hasNormal);
-
-          let nextItem = null;
-
-          if (shouldStartLive) {
-            if (hasPriority) {
-              nextItem = updatedPriorityQueue[0];
-              updatedPriorityQueue =
-                updatedPriorityQueue.slice(1);
-            } else {
-              nextItem = updatedNormalQueue[0];
-              updatedNormalQueue =
-                updatedNormalQueue.slice(1);
-            }
-
-            console.log(
-              "PLAY (auto):",
-              "SEQ:", nextItem.seq,
-              "TG:", nextItem.call.tgid,
-              "PRIORITY:", nextItem.priority
-            );
-          }
-
           return {
             metadata: payload.metadata,
             history: payload.history,
@@ -308,17 +287,9 @@ export const useScannerStore = create(
             priorityQueue: updatedPriorityQueue,
             normalQueue: updatedNormalQueue,
 
-            currentAudio: nextItem
-              ? nextItem.url
-              : state.currentAudio,
-
-            currentCall: nextItem
-              ? nextItem.call
-              : state.currentCall,
-
-            playbackMode: nextItem
-              ? "live"
-              : state.playbackMode,
+            currentAudio: state.currentAudio,
+            currentCall: state.currentCall,
+            playbackMode: state.playbackMode,
           };
         }),
     }),

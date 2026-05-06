@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export default function SignalScope({ active }) {
+export default function SignalScope({ active, priority = 0 }) {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
 
@@ -15,6 +15,42 @@ export default function SignalScope({ active }) {
     const height = canvas.height;
 
     let particles = [];
+    const getColor = (priority) => {
+        switch (priority) {
+          case 5:
+            return "#ef4444"; // red
+          case 4:
+            return "#f97316"; // orange
+          case 3:
+            return "#eab308"; // yellow
+          case 2:
+            return "#22c55e"; // green
+          default:
+            return "#3b82f6"; // blue (normal)
+        }
+      };
+    const baseColor = getColor(priority) || "#22c55e";
+
+    const hexToRgb = (hex) => {
+        if (!hex || typeof hex !== "string") {
+          return { r: 34, g: 197, b: 94 }; // fallback green
+        }
+
+        const clean = hex.replace("#", "");
+        if (clean.length !== 6) {
+          return { r: 34, g: 197, b: 94 };
+        }
+
+        const bigint = parseInt(clean, 16);
+      
+        return {
+          r: (bigint >> 16) & 255,
+          g: (bigint >> 8) & 255,
+          b: bigint & 255,
+        };
+      };
+
+    const { r, g, b } = hexToRgb(baseColor);
 
     const createParticle = () => {
       return {
@@ -60,10 +96,12 @@ export default function SignalScope({ active }) {
 
         ctx.beginPath();
 
-        ctx.strokeStyle = `rgba(34,197,94,${p.alpha})`;
+//      ctx.strokeStyle = `rgba(34,197,94,${p.alpha})`;
+//      ctx.shadowColor = "#22c55e";
+        ctx.strokeStyle = `rgba(${r},${g},${b},${p.alpha})`;
+        ctx.shadowColor = baseColor;
         ctx.lineWidth = p.size;
         ctx.shadowBlur = active ? 2 : 0;
-        ctx.shadowColor = "#22c55e";
 
         ctx.moveTo(p.x, height / 2);
         ctx.lineTo(p.x, p.y);
@@ -85,7 +123,7 @@ export default function SignalScope({ active }) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [active]);
+  }, [active,priority]);
 
   return (
     <div className="bg-black rounded-lg border border-zinc-800 overflow-hidden">

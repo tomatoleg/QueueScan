@@ -55,6 +55,9 @@ export default function AudioPlayer() {
     }
   );
 
+const priorityQueue = useScannerStore((s) => s.priorityQueue);
+const normalQueue = useScannerStore((s) => s.normalQueue);
+
 useEffect(() => {
   if (currentCall) {
     //console.log("CURRENT CALL OBJECT:", currentCall);
@@ -69,32 +72,44 @@ useEffect(() => {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (!audioUnlocked) return;
 
+  useEffect(() => {
     if (audioRef.current && currentAudio) {
       audioRef.current
         .play()
+        .then(() => {
+          if (!audioUnlocked) {
+            console.log("Audio unlocked via real playback");
+            setAudioUnlocked(true);
+          }
+        })
         .catch((err) => {
           console.error("Play failed:", err);
         });
     }
-  }, [currentAudio, audioUnlocked]);
+  }, [currentAudio]);
 
-  useEffect(() => {
-    if (
-      audioUnlocked &&
-      !currentAudio &&
-      replayQueue.length === 0
-    ) {
-      popLive();
-    }
-  }, [
-    currentAudio,
-    replayQueue,
-    popLive,
-    audioUnlocked,
-  ]);
+
+useEffect(() => {
+  const hasQueue =
+    priorityQueue.length > 0 || normalQueue.length > 0;
+
+  if (
+    !currentAudio &&
+    replayQueue.length === 0 &&
+    hasQueue
+  ) {
+    console.log("AUTO START PLAYBACK");
+    popLive();
+  }
+}, [
+  currentAudio,
+  replayQueue,
+  priorityQueue,
+  normalQueue,
+  popLive,
+  audioUnlocked,
+]);
 
   useEffect(() => {
      const tryUnlock = async () => {
@@ -388,7 +403,10 @@ useEffect(() => {
       />
 
       <div className="mb-4">
-        <SignalScope active={!!currentAudio} />
+        <SignalScope 
+            active={!!currentAudio} 
+            priority={currentCall?.priority || 0}
+        />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
