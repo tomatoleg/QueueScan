@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { config } from "../config";
 
 let seq = 0;
+const seenCalls = new Set();
 
 export const useScannerStore = create(
   persist(
@@ -26,7 +27,8 @@ export const useScannerStore = create(
 
       setTvMode: (value) => set({ tvMode: value }),
 
-      setFilterEnabled: (enabled) => set({ filterEnabled: enabled }),
+      setFilterEnabled: (enabled) =>
+        set({ filterEnabled: enabled }),
 
       setSelectedTalkgroups: (list) =>
         set({ selectedTalkgroups: list }),
@@ -77,13 +79,12 @@ export const useScannerStore = create(
           };
         }),
 
-
       popLive: () =>
         set((state) => {
           let next = null;
           let priorityQueue = state.priorityQueue;
           let normalQueue = state.normalQueue;
-      
+
           if (priorityQueue.length > 0) {
             [next, ...priorityQueue] = priorityQueue;
             console.log("PLAYING PRIORITY");
@@ -91,25 +92,25 @@ export const useScannerStore = create(
             [next, ...normalQueue] = normalQueue;
             console.log("PLAYING NORMAL");
           }
-      
+
+          console.log(
+            "POP LIVE DECISION:",
+            "priorityQueue:", state.priorityQueue.length,
+            "normalQueue:", state.normalQueue.length
+          );
+
           console.log(
             "PLAY:",
             "SEQ:", next?.seq,
-            "URL:", next?.url
+            "URL:", next?.url,
+            "TG:", next?.call?.tgid
           );
-      
-console.log(
-  "POP LIVE DECISION:",
-  "priorityQueue:", state.priorityQueue.length,
-  "normalQueue:", state.normalQueue.length
-);
 
-console.log(
-  "PLAY:",
-  "SEQ:", next?.seq,
-  "URL:", next?.url,
-  "TG:", next?.call?.tgid
-);
+          // 🔥 IMPORTANT: cleanup dedup set
+          if (next?.call?.file) {
+            seenCalls.delete(next.call.file);
+          }
+
           return {
             priorityQueue,
             normalQueue,
@@ -118,7 +119,6 @@ console.log(
             playbackMode: "live",
           };
         }),
-
 
       removePlayedCall: (file) =>
         set((state) => ({
@@ -171,25 +171,47 @@ console.log(
           let updatedNormalQueue = state.normalQueue;
 
           if (latestCall && latestCall.file) {
+            const callId = latestCall.file;
+
+            // 🔥 STEP 1 — DUPLICATE CHECK
+            if (seenCalls.has(callId)) {
+              console.log("DUPLICATE SKIPPED:", callId);
+              return {
+                metadata: payload.metadata,
+                history: payload.history,
+                activity: payload.activity,
+                queue: state.queue,
+                priorityQueue: state.priorityQueue,
+                normalQueue: state.normalQueue,
+                currentAudio: state.currentAudio,
+                currentCall: state.currentCall,
+                playbackMode: state.playbackMode,
+              };
+            }
+
             const { shouldProcessCall } =
               useScannerStore.getState();
 
             const ruleResult =
               shouldProcessCall(latestCall);
 
+            // 🔥 STEP 2 — FILTER
             if (!ruleResult.allowed) {
               return {
                 metadata: payload.metadata,
                 history: payload.history,
                 activity: payload.activity,
                 queue: state.queue,
+                priorityQueue: state.priorityQueue,
+                normalQueue: state.normalQueue,
                 currentAudio: state.currentAudio,
                 currentCall: state.currentCall,
                 playbackMode: state.playbackMode,
-                priorityQueue: state.priorityQueue,
-                normalQueue: state.normalQueue,
               };
             }
+
+            // 🔥 STEP 3 — MARK AS SEEN
+            seenCalls.add(callId);
 
             const enrichedCall = {
               ...latestCall,
@@ -217,8 +239,7 @@ console.log(
               })
               .slice(-25);
 
-            const token =
-              localStorage.getItem("token");
+            const token = localStorage.getItem("token");
 
             const liveUrl = `${config.backendUrl}/call/${latestCall.file}?token=${token}`;
 
@@ -242,7 +263,9 @@ console.log(
                 timestamp: Date.now(),
               };
 
-              const isPriority = ruleResult.priority >= 3;
+              const isPriority =
+                ruleResult.priority >= 3;
+
               if (isPriority) {
                 updatedPriorityQueue = [
                   ...state.priorityQueue,
@@ -283,10 +306,8 @@ console.log(
             history: payload.history,
             activity: payload.activity,
             queue: updatedQueue,
-
             priorityQueue: updatedPriorityQueue,
             normalQueue: updatedNormalQueue,
-
             currentAudio: state.currentAudio,
             currentCall: state.currentCall,
             playbackMode: state.playbackMode,

@@ -373,10 +373,12 @@ def login(data: LoginRequest, request: Request):
     ip = request.headers.get("x-forwarded-for", request.client.host)
     load_users()
     stored_pw = users.get(data.username)
+    ts = datetime.now().astimezone()
+
     if not stored_pw or stored_pw != data.password:
-        log_event(f"[LOGIN FAILED] {datetime.now()} user={data.username} ip={ip}")
+        log_event(f"[LOGIN FAILED] {ts.isoformat()} user={data.username} ip={ip}")
         raise HTTPException(status_code=401)
-    log_event(f"[LOGIN SUCCESS] {datetime.now()} user={data.username} ip={ip}")
+    log_event(f"[LOGIN SUCCESS] {ts.isoformat()} user={data.username} ip={ip}")
     token = jwt.encode({"sub": data.username, "exp": datetime.utcnow() + timedelta(hours=24)}, SECRET_KEY, algorithm=ALGORITHM)
     response = JSONResponse({"access_token": token})
     response.set_cookie("token", token, httponly=False)
@@ -430,9 +432,10 @@ async def auth_middleware(request: Request, call_next):
 
         response = await call_next(request)
     
+        ts = datetime.now().astimezone()
         # Only create guest session if NO auth exists
         if not has_cookie and not has_query_token:
-            log_event(f"[GUEST LOGIN] {datetime.now()} ip={client_ip}")
+            log_event(f"[GUEST LOGIN] {ts.isoformat()} ip={client_ip}")
     
             response.set_cookie(
                 key="token",
