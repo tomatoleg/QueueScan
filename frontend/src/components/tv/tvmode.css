@@ -1,0 +1,106 @@
+.tv-root {
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  color: #fff;
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  grid-template-rows: 2fr 1fr;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+/* 🔥 PRIMARY */
+.tv-primary {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+}
+
+.tv-primary-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.tv-title {
+  font-size: 4vw;
+  font-weight: 700;
+}
+
+.tv-sub {
+  font-size: 1.5vw;
+  opacity: 0.7;
+}
+
+/* 📊 GRID */
+.tv-grid {
+  grid-column: 1 / 2;
+  grid-row: 2 / 3;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.tv-tg-card {
+  background: #111;
+  padding: 0.5rem;
+  border-radius: 8px;
+}
+
+.tv-tg-title {
+  font-size: 1.2vw;
+}
+
+.tv-tg-meta {
+  font-size: 0.9vw;
+  opacity: 0.6;
+}
+
+/* 🧾 SIDE */
+.tv-side {
+  grid-column: 2 / 3;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+}
+
+.tv-side-title {
+  font-size: 1.5vw;
+  margin-bottom: 0.5rem;
+}
+
+.tv-activity {
+  font-size: 1vw;
+  opacity: 0.8;
+}
+.priority-5 {
+  color: #ef4444;
+  text-shadow: 0 0 15px rgba(255, 0, 0, 0.9);
+}
+
+.priority-4 {
+  color: #f97316;
+}
+
+.priority-3 {
+  color: #eab308;
+}
+
+.priority-2 {
+  color: #22c55e;
+}
+
+.priority-1 {
+  color: #3b82f6;
+}
+.priority-5 {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+

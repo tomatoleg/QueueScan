@@ -18,6 +18,7 @@ talkgroups.json
 talkgroups_sanitized.json
 # Logs
 backend/logs/*
+logs/*
 !backend/logs/.gitkeep
 
 # Runtime
@@ -39,6 +40,7 @@ backups/
 *.save
 *.bak
 *.zip
+*.old
 
 # OS
 .DS_Store
