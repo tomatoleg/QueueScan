@@ -9,7 +9,7 @@ import HistoryPanel from "./components/HistoryPanel";
 import AudioPlayer from "./components/AudioPlayer";
 import Login from "./components/Login";
 import { useAuthStore } from "./store/useAuthStore";
-import TVLayout from "./components/TVLayout";
+import TVLayout from "./components/tv/TVLayout";
 import { fetchTalkgroups } from "./services/talkgroups";
 import { debug } from "./utils/debug";
 import { apiFetch } from "./services/api";

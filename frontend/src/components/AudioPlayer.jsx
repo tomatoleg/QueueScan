@@ -268,13 +268,6 @@ useEffect(() => {
           )}
 
           <button
-            onClick={() => setTvMode(!tvMode)}
-            className="px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-sm"
-          >
-            {tvMode ? "Exit TV" : "TV Mode"}
-          </button>
-
-          <button
             onClick={() => {
               logout();
               window.location.reload();
