@@ -38,28 +38,20 @@ export default function AudioPlayer() {
   const urlParams = new URLSearchParams(window.location.search);
   const forceTVMode = urlParams.get("mode") === "tv";
 
-  const tgMeta = currentCall
-    ? talkgroups[currentCall.tgid] || {}
-    : {};
+  const tgMeta = currentCall ? talkgroups[currentCall.tgid] || {} : {};
 
-  const formattedDate = new Date(now).toLocaleDateString(
-    undefined,
-    {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }
-  );
+  const formattedDate = new Date(now).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
-  const formattedTime = new Date(now).toLocaleTimeString(
-    undefined,
-    {
-      hour: "numeric",
-      minute: "2-digit",
-      second: "2-digit",
-    }
-  );
+  const formattedTime = new Date(now).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 
   useEffect(() => {
     if (currentCall) {
@@ -67,35 +59,22 @@ export default function AudioPlayer() {
     }
   }, [currentCall]);
 
-
   useEffect(() => {
-  const handler = (e) => {
+    const handler = (e) => {
+      // F1 = radio codes
+      if (e.key === "F1") {
+        e.preventDefault();
 
-    // F1 = radio codes
-    if (e.key === "F1") {
-      e.preventDefault();
+        setShowCodes((prev) => !prev);
+      }
+    };
 
-      setShowCodes(prev => !prev);
-    }
-  };
+    window.addEventListener("keydown", handler);
 
-  window.addEventListener(
-    "keydown",
-    handler
-  );
-
-  return () => {
-    window.removeEventListener(
-      "keydown",
-      handler
-    );
-  };
-}, []);
-
-
-
-
-
+    return () => {
+      window.removeEventListener("keydown", handler);
+    };
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -122,14 +101,9 @@ export default function AudioPlayer() {
   }, [currentAudio]);
 
   useEffect(() => {
-    const hasQueue =
-      priorityQueue.length > 0 || normalQueue.length > 0;
+    const hasQueue = priorityQueue.length > 0 || normalQueue.length > 0;
 
-    if (
-      !currentAudio &&
-      replayQueue.length === 0 &&
-      hasQueue
-    ) {
+    if (!currentAudio && replayQueue.length === 0 && hasQueue) {
       console.log("AUTO START PLAYBACK");
       popLive();
     }
@@ -237,17 +211,13 @@ export default function AudioPlayer() {
 
   const oldestItem = queue[0];
 
-  const queueDelay = oldestItem?.queuedAt
-    ? now - oldestItem.queuedAt
-    : 0;
+  const queueDelay = oldestItem?.queuedAt ? now - oldestItem.queuedAt : 0;
 
   return (
     <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-5">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h2 className="text-4xl font-bold">
-            QueueScan
-          </h2>
+          <h2 className="text-4xl font-bold">QueueScan</h2>
 
           <div className="text-sm opacity-60">
             {playbackMode === "replay"
@@ -255,20 +225,14 @@ export default function AudioPlayer() {
               : "Live Scanner Audio"}
           </div>
 
-          <div className="mt-2 text-sm text-zinc-400">
-            {formattedDate}
-          </div>
+          <div className="mt-2 text-sm text-zinc-400">{formattedDate}</div>
 
-          <div className="text-lg font-mono text-zinc-200">
-            {formattedTime}
-          </div>
+          <div className="text-lg font-mono text-zinc-200">{formattedTime}</div>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="text-sm text-zinc-400">
-              Logged in as
-            </div>
+            <div className="text-sm text-zinc-400">Logged in as</div>
 
             <div className="text-sm font-medium text-zinc-200">
               {username || "Unknown"}
@@ -277,9 +241,7 @@ export default function AudioPlayer() {
 
           <div
             className={`px-3 py-1 rounded-full text-sm font-medium ${
-              playbackMode === "replay"
-                ? "bg-amber-600"
-                : "bg-green-700"
+              playbackMode === "replay" ? "bg-amber-600" : "bg-green-700"
             }`}
           >
             {playbackMode.toUpperCase()}
@@ -294,11 +256,9 @@ export default function AudioPlayer() {
             </button>
           )}
 
-<button
-  onClick={() =>
-    setShowCodes(true)
-  }
-  className="
+          <button
+            onClick={() => setShowCodes(true)}
+            className="
     px-3 py-2
     rounded-lg
     bg-zinc-800
@@ -307,10 +267,10 @@ export default function AudioPlayer() {
     text-zinc-200
     transition-colors
   "
-  title="Radio Codes (F1)"
->
-  Codes
-</button>
+            title="Radio Codes (F1)"
+          >
+            Codes
+          </button>
           <button
             onClick={() => {
               logout();
@@ -333,12 +293,9 @@ export default function AudioPlayer() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5 h-[120px] overflow-hidden">
-
         {/* Talkgroup */}
         <div>
-          <div className="text-xs uppercase opacity-50 mb-1">
-            Talkgroup
-          </div>
+          <div className="text-xs uppercase opacity-50 mb-1">Talkgroup</div>
 
           <div className="h-[96px] flex flex-col justify-start overflow-hidden">
             <div
@@ -350,18 +307,56 @@ export default function AudioPlayer() {
                 maxHeight: "4.8rem",
               }}
             >
-              {currentCall
-                ? (tgMeta.label || currentCall.talkgroup)
-                : "Scanning..."}
+              {currentCall ? (
+                tgMeta.label || currentCall.talkgroup
+              ) : (
+                <div className="flex items-center gap-4 h-full">
+                  {/* Radar */}
+                  <div className="relative w-16 h-16 shrink-0 opacity-90">
+                    {/* Rings */}
+                    <div className="absolute inset-0 rounded-full border border-cyan-500/30"></div>
+                    <div className="absolute inset-[12px] rounded-full border border-cyan-500/20"></div>
+                    <div className="absolute inset-[24px] rounded-full border border-cyan-500/15"></div>
+
+                    {/* Crosshair */}
+                    <div className="absolute left-1/2 top-0 h-full w-px bg-cyan-500/15 -translate-x-1/2"></div>
+                    <div className="absolute top-1/2 left-0 w-full h-px bg-cyan-500/15 -translate-y-1/2"></div>
+
+                    {/* Sweep */}
+                    <div
+                      className="absolute left-1/2 top-1/2 h-8 w-[2px] origin-bottom animate-spin"
+                      style={{
+                        animationDuration: "2.5s",
+                        background:
+                          "linear-gradient(to top, rgba(34,211,238,0.95), rgba(34,211,238,0))",
+                        transform: "translateX(-50%)",
+                        transformOrigin: "bottom center",
+                      }}
+                    ></div>
+
+                    {/* Center Dot */}
+                    <div className="absolute left-1/2 top-1/2 w-2 h-2 rounded-full bg-cyan-400 -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+                  </div>
+
+                  {/* Text */}
+                  <div className="flex flex-col leading-none">
+                    <span className="text-cyan-400 text-3xl font-semibold tracking-[0.2em] animate-pulse">
+                      SCANNING
+                    </span>
+
+                    <span className="text-zinc-500 text-sm tracking-[0.25em] uppercase">
+                      Monitoring channels
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Radio */}
         <div>
-          <div className="text-xs uppercase opacity-50 mb-1">
-            Radio
-          </div>
+          <div className="text-xs uppercase opacity-50 mb-1">Radio</div>
 
           <div className={`text-lg ${!currentCall ? "opacity-30" : ""}`}>
             {currentCall?.radio || "—"}
@@ -370,9 +365,7 @@ export default function AudioPlayer() {
 
         {/* Frequency */}
         <div>
-          <div className="text-xs uppercase opacity-50 mb-1">
-            Frequency
-          </div>
+          <div className="text-xs uppercase opacity-50 mb-1">Frequency</div>
 
           <div className={`text-lg ${!currentCall ? "opacity-30" : ""}`}>
             {currentCall?.frequency || "—"}
@@ -381,18 +374,14 @@ export default function AudioPlayer() {
 
         {/* TGID */}
         <div>
-          <div className="text-xs uppercase opacity-50 mb-1">
-            TGID
-          </div>
+          <div className="text-xs uppercase opacity-50 mb-1">TGID</div>
 
           <div className={`text-lg ${!currentCall ? "opacity-30" : ""}`}>
             {currentCall?.tgid || "—"}
           </div>
 
           <div className="mt-2 text-sm text-zinc-400 h-5">
-            {currentCall
-              ? formatCallTime(currentCall.time)
-              : ""}
+            {currentCall ? formatCallTime(currentCall.time) : ""}
           </div>
         </div>
       </div>
@@ -415,49 +404,30 @@ export default function AudioPlayer() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div className="bg-zinc-800 rounded-lg p-3">
-          <div className="opacity-50 mb-1">
-            Queue Depth
-          </div>
+          <div className="opacity-50 mb-1">Queue Depth</div>
 
-          <div className="text-xl font-semibold">
-            {queue.length}
-          </div>
+          <div className="text-xl font-semibold">{queue.length}</div>
         </div>
 
         <div className="bg-zinc-800 rounded-lg p-3">
-          <div className="opacity-50 mb-1">
-            Queue Delay
-          </div>
+          <div className="opacity-50 mb-1">Queue Delay</div>
 
-          <div className="text-xl font-semibold">
-            {formatAge(queueDelay)}
-          </div>
+          <div className="text-xl font-semibold">{formatAge(queueDelay)}</div>
         </div>
 
         <div className="bg-zinc-800 rounded-lg p-3">
-          <div className="opacity-50 mb-1">
-            Replay Pending
-          </div>
+          <div className="opacity-50 mb-1">Replay Pending</div>
 
-          <div className="text-xl font-semibold">
-            {replayQueue.length}
-          </div>
+          <div className="text-xl font-semibold">{replayQueue.length}</div>
         </div>
 
         <div className="bg-zinc-800 rounded-lg p-3">
-          <div className="opacity-50 mb-1">
-            Status
-          </div>
+          <div className="opacity-50 mb-1">Status</div>
 
           <div className="text-xl font-semibold">
             {currentAudio ? "Playing" : "Idle"}
           </div>
-          <CodeOverlay
-             open={showCodes}
-             onClose={() =>
-               setShowCodes(false)
-             }
-           />
+          <CodeOverlay open={showCodes} onClose={() => setShowCodes(false)} />
         </div>
       </div>
     </div>

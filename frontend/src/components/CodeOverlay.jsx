@@ -293,6 +293,14 @@ export default function CodeOverlay({
               }
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-4 pl-12 pr-4 text-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
             />
+          {search && (
+             <button
+               onClick={() => setSearch("")}
+               className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+             >
+               <X size={22} />
+             </button>
+           )}
           </div>
         </div>
 
