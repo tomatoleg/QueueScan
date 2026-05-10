@@ -3,16 +3,18 @@ import { useScannerStore } from "../store/useScannerStore";
 import SignalScope from "./SignalScope";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatCallTime } from "../utils/time";
+import CodeOverlay from "./CodeOverlay";
 
 export default function AudioPlayer() {
   const audioRef = useRef(null);
 
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [showCodes, setShowCodes] = useState(false);
 
   const currentAudio = useScannerStore((s) => s.currentAudio);
   const currentCall = useScannerStore((s) => s.currentCall);
-  const talkgroups = useScannerStore( (s) => s.talkgroups);
+  const talkgroups = useScannerStore((s) => s.talkgroups);
   const playbackMode = useScannerStore((s) => s.playbackMode);
 
   const replayQueue = useScannerStore((s) => s.replayQueue);
@@ -30,11 +32,15 @@ export default function AudioPlayer() {
   const logout = useAuthStore((s) => s.logout);
   const username = useAuthStore((s) => s.username);
 
+  const priorityQueue = useScannerStore((s) => s.priorityQueue);
+  const normalQueue = useScannerStore((s) => s.normalQueue);
+
   const urlParams = new URLSearchParams(window.location.search);
   const forceTVMode = urlParams.get("mode") === "tv";
+
   const tgMeta = currentCall
-     ? talkgroups[currentCall.tgid] || {}
-     : {};
+    ? talkgroups[currentCall.tgid] || {}
+    : {};
 
   const formattedDate = new Date(now).toLocaleDateString(
     undefined,
@@ -55,14 +61,41 @@ export default function AudioPlayer() {
     }
   );
 
-const priorityQueue = useScannerStore((s) => s.priorityQueue);
-const normalQueue = useScannerStore((s) => s.normalQueue);
+  useEffect(() => {
+    if (currentCall) {
+      // console.log("CURRENT CALL OBJECT:", currentCall);
+    }
+  }, [currentCall]);
 
-useEffect(() => {
-  if (currentCall) {
-    //console.log("CURRENT CALL OBJECT:", currentCall);
-  }
-}, [currentCall]);
+
+  useEffect(() => {
+  const handler = (e) => {
+
+    // F1 = radio codes
+    if (e.key === "F1") {
+      e.preventDefault();
+
+      setShowCodes(prev => !prev);
+    }
+  };
+
+  window.addEventListener(
+    "keydown",
+    handler
+  );
+
+  return () => {
+    window.removeEventListener(
+      "keydown",
+      handler
+    );
+  };
+}, []);
+
+
+
+
+
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -71,7 +104,6 @@ useEffect(() => {
 
     return () => clearInterval(timer);
   }, []);
-
 
   useEffect(() => {
     if (audioRef.current && currentAudio) {
@@ -89,96 +121,93 @@ useEffect(() => {
     }
   }, [currentAudio]);
 
+  useEffect(() => {
+    const hasQueue =
+      priorityQueue.length > 0 || normalQueue.length > 0;
 
-useEffect(() => {
-  const hasQueue =
-    priorityQueue.length > 0 || normalQueue.length > 0;
-
-  if (
-    !currentAudio &&
-    replayQueue.length === 0 &&
-    hasQueue
-  ) {
-    console.log("AUTO START PLAYBACK");
-    popLive();
-  }
-}, [
-  currentAudio,
-  replayQueue,
-  priorityQueue,
-  normalQueue,
-  popLive,
-  audioUnlocked,
-]);
+    if (
+      !currentAudio &&
+      replayQueue.length === 0 &&
+      hasQueue
+    ) {
+      console.log("AUTO START PLAYBACK");
+      popLive();
+    }
+  }, [
+    currentAudio,
+    replayQueue,
+    priorityQueue,
+    normalQueue,
+    popLive,
+    audioUnlocked,
+  ]);
 
   useEffect(() => {
-     const tryUnlock = async () => {
-       const audio = audioRef.current;
+    const tryUnlock = async () => {
+      const audio = audioRef.current;
 
-       if (!audio) return;
+      if (!audio) return;
 
-       try {
-         audio.muted = true;
-   
-         const p = audio.play();
-   
-         if (p !== undefined) {
-           await p;
-         }
-   
-         audio.pause();
-         audio.currentTime = 0;
-         audio.muted = false;
-   
-         setAudioUnlocked(true);
-   
-         console.log("Audio unlocked");
-       } catch (err) {
-         console.log("Unlock attempt failed", err);
-       }
-     };
-   
-     // TV mode: unlock aggressively on startup
-     if (forceTVMode) {
-       const timeout = setTimeout(() => {
-         tryUnlock();
-       }, 500);
-   
-       return () => clearTimeout(timeout);
-     }
+      try {
+        audio.muted = true;
 
-     // Desktop: retry until unlocked
-     const timer = setInterval(() => {
-       if (!audioUnlocked && audioRef.current) {
-         tryUnlock();
-       }
-     }, 1000);
-   
-     return () => clearInterval(timer);
-   }, [audioUnlocked, forceTVMode]);
+        const p = audio.play();
 
+        if (p !== undefined) {
+          await p;
+        }
 
-  const handleEnded = () => {
-      const finishedFile = currentCall?.file;
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
 
-      // Remove from history queue
-      if (finishedFile) {
-        removePlayedCall(finishedFile);
+        setAudioUnlocked(true);
+
+        console.log("Audio unlocked");
+      } catch (err) {
+        console.log("Unlock attempt failed", err);
       }
-
-      // If replay is active, continue replay first
-      if (replayQueue.length > 0) {
-        popReplay();
-        return;
-      }
-
-      // Clear current audio so queue can advance
-      setCurrentAudio(null, null, "live");
-    
-      // Immediately pull next call (priority-aware)
-      popLive();
     };
 
+    // TV mode: unlock aggressively on startup
+    if (forceTVMode) {
+      const timeout = setTimeout(() => {
+        tryUnlock();
+      }, 500);
+
+      return () => clearTimeout(timeout);
+    }
+
+    // Desktop: retry until unlocked
+    const timer = setInterval(() => {
+      if (!audioUnlocked && audioRef.current) {
+        tryUnlock();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [audioUnlocked, forceTVMode]);
+
+  const handleEnded = () => {
+    const finishedFile = currentCall?.file;
+
+    // Remove from history queue
+    if (finishedFile) {
+      removePlayedCall(finishedFile);
+    }
+
+    // If replay is active, continue replay first
+    if (replayQueue.length > 0) {
+      popReplay();
+      return;
+    }
+
+    // Clear current audio so queue can advance
+    setCurrentAudio(null, null, "live");
+
+    // Immediately pull next call (priority-aware)
+    popLive();
+  };
 
   const unlockAudio = async () => {
     try {
@@ -206,13 +235,11 @@ useEffect(() => {
     return `+${minutes}m ${remaining}s`;
   };
 
-
   const oldestItem = queue[0];
 
-  const queueDelay =
-    oldestItem?.queuedAt
-      ? now - oldestItem.queuedAt
-      : 0;
+  const queueDelay = oldestItem?.queuedAt
+    ? now - oldestItem.queuedAt
+    : 0;
 
   return (
     <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-5">
@@ -267,6 +294,23 @@ useEffect(() => {
             </button>
           )}
 
+<button
+  onClick={() =>
+    setShowCodes(true)
+  }
+  className="
+    px-3 py-2
+    rounded-lg
+    bg-zinc-800
+    hover:bg-zinc-700
+    border border-zinc-700
+    text-zinc-200
+    transition-colors
+  "
+  title="Radio Codes (F1)"
+>
+  Codes
+</button>
           <button
             onClick={() => {
               logout();
@@ -288,103 +332,70 @@ useEffect(() => {
         </button>
       )}
 
-      {currentCall ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5 min-h-[88px]">
-          <div>
-            <div className="text-xs uppercase opacity-50 mb-1">
-              Talkgroup
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5 h-[120px] overflow-hidden">
 
-            <div className="text-4xl font-semibold">
-              {tgMeta.label || currentCall.talkgroup}
-              {tgMeta.agency && (
-              <div className="text-sm text-zinc-400 mt-1">
-                {tgMeta.agency}
-              </div>
-              )}
-            </div>
+        {/* Talkgroup */}
+        <div>
+          <div className="text-xs uppercase opacity-50 mb-1">
+            Talkgroup
           </div>
 
-          <div>
-            <div className="text-xs uppercase opacity-50 mb-1">
-              Radio
-            </div>
-
-            <div className="text-lg">
-              {currentCall.radio || "Unknown"}
-            </div>
-          </div>
-
-          <div>
-            <div className="text-xs uppercase opacity-50 mb-1">
-              Frequency
-            </div>
-
-            <div className="text-lg">
-              {currentCall.frequency || "Unknown"}
-            </div>
-          </div>
-
-          <div>
-            <div className="text-xs uppercase opacity-50 mb-1">
-              TGID
-            </div>
-
-            <div className="text-lg">
-              {currentCall.tgid}
-            </div>
-        <div className="mt-2 text-sm text-zinc-400">
-  {formatCallTime(currentCall.time)}
-</div>
-
-
-          </div>
-
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5 min-h-[88px]">
-          <div className="flex items-center">
-            <div>
-              <div className="text-xs uppercase opacity-50 mb-1">
-                Talkgroup
-              </div>
-
-              <div className="text-4xl font-semibold opacity-40">
-                Scanning....
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center opacity-30">
-            <div>
-              <div className="text-xs uppercase opacity-50 mb-1">
-                Radio
-              </div>
-
-              <div className="text-lg">—</div>
-            </div>
-          </div>
-
-          <div className="flex items-center opacity-30">
-            <div>
-              <div className="text-xs uppercase opacity-50 mb-1">
-                Frequency
-              </div>
-
-              <div className="text-lg">—</div>
-            </div>
-          </div>
-          <div className="flex items-center opacity-30">
-            <div>
-              <div className="text-xs uppercase opacity-50 mb-1">
-                TGID
-              </div>
-
-              <div className="text-lg">—</div>
+          <div className="h-[96px] flex flex-col justify-start overflow-hidden">
+            <div
+              className={`text-4xl font-semibold leading-tight break-words ${
+                !currentCall ? "opacity-40" : ""
+              }`}
+              style={{
+                minHeight: "4.8rem",
+                maxHeight: "4.8rem",
+              }}
+            >
+              {currentCall
+                ? (tgMeta.label || currentCall.talkgroup)
+                : "Scanning..."}
             </div>
           </div>
         </div>
-      )}
+
+        {/* Radio */}
+        <div>
+          <div className="text-xs uppercase opacity-50 mb-1">
+            Radio
+          </div>
+
+          <div className={`text-lg ${!currentCall ? "opacity-30" : ""}`}>
+            {currentCall?.radio || "—"}
+          </div>
+        </div>
+
+        {/* Frequency */}
+        <div>
+          <div className="text-xs uppercase opacity-50 mb-1">
+            Frequency
+          </div>
+
+          <div className={`text-lg ${!currentCall ? "opacity-30" : ""}`}>
+            {currentCall?.frequency || "—"}
+          </div>
+        </div>
+
+        {/* TGID */}
+        <div>
+          <div className="text-xs uppercase opacity-50 mb-1">
+            TGID
+          </div>
+
+          <div className={`text-lg ${!currentCall ? "opacity-30" : ""}`}>
+            {currentCall?.tgid || "—"}
+          </div>
+
+          <div className="mt-2 text-sm text-zinc-400 h-5">
+            {currentCall
+              ? formatCallTime(currentCall.time)
+              : ""}
+          </div>
+        </div>
+      </div>
 
       <audio
         key="persistent-player"
@@ -396,9 +407,9 @@ useEffect(() => {
       />
 
       <div className="mb-4">
-        <SignalScope 
-            active={!!currentAudio} 
-            priority={currentCall?.priority || 0}
+        <SignalScope
+          active={!!currentAudio}
+          priority={currentCall?.priority || 0}
         />
       </div>
 
@@ -441,6 +452,12 @@ useEffect(() => {
           <div className="text-xl font-semibold">
             {currentAudio ? "Playing" : "Idle"}
           </div>
+          <CodeOverlay
+             open={showCodes}
+             onClose={() =>
+               setShowCodes(false)
+             }
+           />
         </div>
       </div>
     </div>
