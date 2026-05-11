@@ -89,6 +89,7 @@ LAN_PREFIX = CONFIG["network"]["lan_prefix"]
 SESSION_TIMEOUT = CONFIG["session"]["timeout"]
 MAX_HISTORY = CONFIG["limits"]["max_history"]
 MAX_ACTIVE = CONFIG["limits"]["max_active"]
+MAX_REPLAY = CONFIG["limits"]["max_replay_buffer"]
 CORS_ORIGINS = CONFIG.get("cors", {}).get("allow_origins", [])
 
 
@@ -97,11 +98,15 @@ print(" QueueScan Startup Configuration")
 print("===========================================")
 print(f"Running in Docker: {os.environ.get('RUNNING_IN_DOCKER') == '1'}")
 print(f"Recordings Directory: {RECORDINGS_DIR}")
+print(f"Config File: {CONFIG_FILE}")
 print(f"Talkgroups File: {TG_FILE}")
 print(f"Users File: {USER_FILE}")
 print(f"HTML Template: {HTML_FILE}")
 print(f"Log File: {LOG_FILE}")
 print(f"Static Directory: {STATIC_DIR}")
+print(f"Max History: {MAX_HISTORY}")
+print(f"Max Replay: {MAX_REPLAY}")
+print(f"Max Active Talkgroups: {MAX_ACTIVE}")
 print("===========================================")
 
 
@@ -115,7 +120,7 @@ print("===========================================")
 clients = []
 users = {}
 history = []
-replay_buffer = deque(maxlen=200)
+replay_buffer = deque(maxlen=MAX_REPLAY)
 activity_counter = defaultdict(int)
 activity_meta = {}
 TG_MAP = {}
