@@ -8,6 +8,7 @@ export const config = {
   websocketPath: "/ws",
   apiPath: "",
   replayPath: "/replay",
+  replayCountsPath: "/api/replay_counts",
 
   defaultQueueLimit: 25,
   historyLimit: 250,

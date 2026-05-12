@@ -125,6 +125,7 @@ activity_counter = defaultdict(int)
 activity_meta = {}
 TG_MAP = {}
 processed_files = set()
+replay_counts = {}
 
 # ============================================================
 # HELPERS & DATA LOADING
@@ -213,6 +214,24 @@ async def wait_for_complete_file(path, checks=6, delay=0.4):
         await asyncio.sleep(delay)
     return False
 
+def rebuild_replay_counts():
+    global replay_counts
+
+    counts = defaultdict(int)
+
+    for call in replay_buffer:
+        tgid = str(call.get("tgid"))
+
+        if tgid:
+            counts[tgid] += 1
+
+    replay_counts = dict(counts)
+
+    print(
+        f"[ReplayCounts] Updated: "
+        f"{len(replay_counts)} talkgroups"
+    )
+
 # ============================================================
 # CORE ENGINE (WATCHER)
 # ============================================================
@@ -233,7 +252,9 @@ async def watch_recordings():
                     activity_counter[tg] += 1
                     activity_meta[tg] = {"category": info["category"], "last_seen": info["time"], "tgid": info["tgid"]}
 #                   if not info["encrypted"]: replay_buffer.append(info["file"])
-                    if not info["encrypted"]: replay_buffer.append(info)
+                    if not info["encrypted"]: 
+                        replay_buffer.append(info)
+                        rebuild_replay_counts()
                     if len(history) > MAX_HISTORY: history.pop()
                     await broadcast({"type": "full_update", "metadata": info, "history": history[:MAX_HISTORY], 
                                      "activity": {tg: {"count": c, **activity_meta.get(tg, {})} 
@@ -312,6 +333,7 @@ async def lifespan(app: FastAPI):
     LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     load_users()
     load_talkgroups()
+    rebuild_replay_counts()
     watcher_task = asyncio.create_task(watch_recordings())
     yield
     watcher_task.cancel()
@@ -347,6 +369,11 @@ def replay_talkgroup(tgid: str, limit: int = 25):
     matches = matches[-limit:]
 
     return list(matches)
+
+
+@app.get("/api/replay_counts")
+async def get_replay_counts():
+    return replay_counts
 
 @app.get("/version")
 def version():

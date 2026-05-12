@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useScannerStore } from "../store/useScannerStore";
 import { config } from "../config";
 import { apiFetch } from "../services/api";
@@ -17,7 +18,9 @@ export default function ActivityPanel() {
 
   const enqueueReplay = useScannerStore((s) => s.enqueueReplay);
   const popReplay = useScannerStore((s) => s.popReplay);
+  const [replayCounts, setReplayCounts] = useState({});
 
+  
   const entries = Object.entries(activity)
     .map(([tg, obj]) => {
       const tgid = String(obj.tgid);
@@ -37,6 +40,37 @@ export default function ActivityPanel() {
       return b.count - a.count;
     });
 
+
+  useEffect(() => {
+  const loadReplayCounts = async () => {
+    try {
+      const res = await apiFetch(
+        config.replayCountsPath
+      );
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      setReplayCounts(data);
+    } catch (err) {
+      console.error(
+        "Failed loading replay counts",
+        err
+      );
+    }
+  };
+
+  loadReplayCounts();
+
+  const interval = setInterval(
+    loadReplayCounts,
+    10000
+  );
+
+  return () => clearInterval(interval);
+}, []);
+
   const toggleTG = (tgid) => {
     if (selectedTalkgroups.includes(tgid)) {
       setSelectedTalkgroups(
@@ -49,6 +83,7 @@ export default function ActivityPanel() {
       ]);
     }
   };
+
 
   const getPriorityStyle = (priority) => {
     switch (priority) {
@@ -157,8 +192,14 @@ export default function ActivityPanel() {
                   TGID: {item.tgid}
                 </div>
 
-                <div className="text-sm opacity-60 mt-1">
-                  {item.count} calls
+                <div className="text-sm opacity-60 mt-1 flex items-center gap-2">
+                  <span>{item.count} calls</span>
+
+                  {(replayCounts[item.tgid] ?? 0) > 0 && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-600">
+                      ↺ {replayCounts[item.tgid]}
+                    </span>
+                  )}
                 </div>
               </div>
 
