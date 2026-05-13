@@ -354,6 +354,14 @@ export default function AudioPlayer() {
           </div>
         </div>
 
+        {/* Call Time */}
+        <div>
+          <div className="text-xs uppercase opacity-50 mb-1">Call Time</div>
+          <div className={`text-lg ${!currentCall ? "opacity-30" : ""}`}>
+            {currentCall ? formatCallTime(currentCall.time) : ""}
+          </div>
+        </div>
+
         {/* Radio */}
         <div>
           <div className="text-xs uppercase opacity-50 mb-1">Radio</div>
@@ -380,9 +388,6 @@ export default function AudioPlayer() {
             {currentCall?.tgid || "—"}
           </div>
 
-          <div className="mt-2 text-sm text-zinc-400 h-5">
-            {currentCall ? formatCallTime(currentCall.time) : ""}
-          </div>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { config } from "../config";
 
 let seq = 0;
 const seenCalls = new Set();
+const MAX_VISIBLE_QUEUE = 250;  
 
 export const useScannerStore = create(
   persist(
@@ -237,7 +238,7 @@ export const useScannerStore = create(
 
                 return ageOK && !!item.file;
               })
-              .slice(-25);
+              .slice(-MAX_VISIBLE_QUEUE);
 
             const token = localStorage.getItem("token");
 
