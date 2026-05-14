@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useScannerStore } from "../store/useScannerStore";
 import SignalScope from "./SignalScope";
+import Oscilloscope from "./Oscilloscope";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatCallTime } from "../utils/time";
 import CodeOverlay from "./CodeOverlay";
@@ -11,6 +12,13 @@ export default function AudioPlayer() {
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [showCodes, setShowCodes] = useState(false);
+  const [showOscilloscope, setShowOscilloscope] = useState(() => {
+    return localStorage.getItem("showOscilloscope") !== "false";
+  });
+
+  const [showSignalScope, setShowSignalScope] = useState(() => {
+    return localStorage.getItem("showSignalScope") !== "false";
+  });
 
   const currentAudio = useScannerStore((s) => s.currentAudio);
   const currentCall = useScannerStore((s) => s.currentCall);
@@ -162,6 +170,20 @@ export default function AudioPlayer() {
     return () => clearInterval(timer);
   }, [audioUnlocked, forceTVMode]);
 
+  useEffect(() => {
+    localStorage.setItem(
+      "showOscilloscope",
+      showOscilloscope
+    );
+  }, [showOscilloscope]);
+  
+  useEffect(() => {
+    localStorage.setItem(
+      "showSignalScope",
+      showSignalScope
+    );
+  }, [showSignalScope]);
+
   const handleEnded = () => {
     const finishedFile = currentCall?.file;
 
@@ -255,6 +277,40 @@ export default function AudioPlayer() {
               Stop Replay
             </button>
           )}
+
+          <button
+            onClick={() =>
+              setShowOscilloscope(!showOscilloscope)
+            }
+            className={`
+              px-3 py-2 rounded-lg border transition-colors
+              ${
+                showOscilloscope
+                  ? "bg-cyan-700 border-cyan-600 text-white"
+                  : "bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300"
+              }
+            `}
+            title="Toggle Oscilloscope"
+          >
+            Scope
+          </button>
+
+          <button
+            onClick={() =>
+              setShowSignalScope(!showSignalScope)
+            }
+            className={`
+              px-3 py-2 rounded-lg border transition-colors
+              ${
+                showSignalScope
+                  ? "bg-cyan-700 border-cyan-600 text-white"
+                  : "bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300"
+              }
+            `}
+            title="Toggle Signal Scope"
+          >
+            Signal
+          </button>
 
           <button
             onClick={() => setShowCodes(true)}
@@ -400,12 +456,23 @@ export default function AudioPlayer() {
         onEnded={handleEnded}
       />
 
-      <div className="mb-4">
-        <SignalScope
-          active={!!currentAudio}
-          priority={currentCall?.priority || 0}
-        />
+      <div className="space-y-4 mb-4">
+        {showOscilloscope ? (
+          <Oscilloscope
+            audioElement={audioRef.current}
+            priority={currentCall?.priority || 0}
+          />
+        ) : null}
+      
+        {showSignalScope ? (
+          <SignalScope
+            active={!!currentAudio}
+            priority={currentCall?.priority || 0}
+          />
+        ) : null}
       </div>
+
+
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div className="bg-zinc-800 rounded-lg p-3">
