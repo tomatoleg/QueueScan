@@ -5,9 +5,58 @@ import Oscilloscope from "./Oscilloscope";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatCallTime } from "../utils/time";
 import CodeOverlay from "./CodeOverlay";
+import welcomeAudio from "../assets/welcome.mp3";
 
 export default function AudioPlayer() {
   const audioRef = useRef(null);
+
+  const [scannerEnabled, setScannerEnabled] = useState(false);
+
+  const powerOnScanner = async () => {
+     try {
+       const audio = audioRef.current;
+
+       if (!audio) return;
+
+       // Create a tiny silent audio source
+       audio.src =
+         "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
+
+       // THIS happens during user gesture
+       await audio.play();
+
+       audio.pause();
+       audio.currentTime = 0;
+
+       setAudioUnlocked(true);
+       setScannerEnabled(true);
+   
+       console.log("Audio unlocked via power button");
+       // Play welcome message
+       const welcome = new Audio(welcomeAudio);
+
+       await new Promise((resolve) => {
+         welcome.onended = resolve;
+         welcome.onerror = resolve; // fail gracefully
+         welcome.play().catch(resolve);
+       });
+       await new Promise((r) => setTimeout(r, 500));
+
+       // Begin scanning
+
+       const hasQueue =
+         priorityQueue.length > 0 ||
+         normalQueue.length > 0;
+
+       if (hasQueue) {
+         popLive();
+       }
+     } catch (err) {
+       console.error("Power on failed", err);
+     }
+   };
+
+
 
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -111,10 +160,18 @@ export default function AudioPlayer() {
   useEffect(() => {
     const hasQueue = priorityQueue.length > 0 || normalQueue.length > 0;
 
-    if (!currentAudio && replayQueue.length === 0 && hasQueue) {
-      console.log("AUTO START PLAYBACK");
+    if (
+      scannerEnabled &&
+      !currentAudio &&
+      replayQueue.length === 0 &&
+      hasQueue
+    ) {
       popLive();
     }
+
+
+
+
   }, [
     currentAudio,
     replayQueue,
@@ -339,14 +396,19 @@ export default function AudioPlayer() {
         </div>
       </div>
 
-      {!audioUnlocked && !forceTVMode && (
-        <button
-          onClick={unlockAudio}
-          className="mb-4 px-4 py-2 rounded bg-blue-600 hover:bg-blue-500"
-        >
-          Enable Audio
-        </button>
-      )}
+      {!scannerEnabled && (
+         <button
+           onClick={powerOnScanner}
+           className="
+             mb-4 w-full py-6 rounded-xl
+             bg-green-700 hover:bg-green-600
+             text-2xl font-bold tracking-widest
+             border border-green-500
+           "
+         >
+           POWER ON SCANNER
+         </button>
+       )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5 h-[120px] overflow-hidden">
         {/* Talkgroup */}
