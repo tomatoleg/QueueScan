@@ -39,6 +39,12 @@ export default function AudioPlayer() {
          welcome.onended = resolve;
          welcome.onerror = resolve; // fail gracefully
          welcome.play().catch(resolve);
+        // const p = welcome.play();
+
+        // if (p !== undefined) {
+        //   p.catch(resolve);
+        //   }
+
        });
        await new Promise((r) => setTimeout(r, 500));
 
