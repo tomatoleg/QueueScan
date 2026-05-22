@@ -240,7 +240,7 @@ export const useScannerStore = create(
               })
               .slice(-MAX_VISIBLE_QUEUE);
 
-            const token = localStorage.getItem("token");
+            const token = sessionStorage.getItem("token");
 
             const liveUrl = `${config.backendUrl}/call/${latestCall.file}?token=${token}`;
 

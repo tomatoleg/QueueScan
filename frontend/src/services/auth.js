@@ -17,7 +17,7 @@ function isTokenExpired(token) {
 }
 
 export async function ensureToken() {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
 
   if (!token) {
     return null;
@@ -27,7 +27,7 @@ export async function ensureToken() {
 }
 
 export async function OLDensureToken() {
-  let token = localStorage.getItem("token");
+  let token = sessionStorage.getItem("token");
 
   if (token) {
     if (!isTokenExpired(token)) {
@@ -36,7 +36,7 @@ export async function OLDensureToken() {
 
     debug("Token expired — requesting new token");
 
-    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
     token = null;
   }
 
@@ -60,7 +60,7 @@ export async function OLDensureToken() {
 
     token = data.access_token;
 
-    localStorage.setItem("token", token);
+    sessionStorage.setItem("token", token);
 
     debug("New token acquired");
 

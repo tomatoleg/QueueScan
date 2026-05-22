@@ -1,13 +1,13 @@
 import { create } from "zustand";
 
 export const useAuthStore = create((set) => ({
-  token: localStorage.getItem("token") || null,
-  username: localStorage.getItem("username") || null,
-  isAuthenticated: !!localStorage.getItem("token"),
+  token: sessionStorage.getItem("token") || null,
+  username: sessionStorage.getItem("username") || null,
+  isAuthenticated: !!sessionStorage.getItem("token"),
 
   login: (token, username) => {
-    localStorage.setItem("token", token);
-    localStorage.setItem("username", username);
+    sessionStorage.setItem("token", token);
+    sessionStorage.setItem("username", username);
 
     set({
       token,
@@ -15,10 +15,16 @@ export const useAuthStore = create((set) => ({
       isAuthenticated: true,
     });
   },
+  clearAuth: () =>
+  set({
+    token: null,
+    username: null,
+    isAuthenticated: false,
+  }),
 
   logout: () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("username");
 
     set({
       token: null,
