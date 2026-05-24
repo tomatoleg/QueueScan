@@ -109,7 +109,7 @@ export default function ActivityPanel() {
 
   const replayTalkgroup = async (tgid) => {
      try {
-       const token = localStorage.getItem("token");
+       const token = sessionStorage.getItem("token");
    
 
        const replayUrl =

@@ -157,9 +157,19 @@ export default function AudioPlayer() {
             setAudioUnlocked(true);
           }
         })
-        .catch((err) => {
-          console.error("Play failed:", err);
-        });
+       .catch((err) => {
+        if (
+          err.name ===
+          "AbortError"
+        ) {
+          return;
+        }
+      
+        console.error(
+          "Play failed:",
+          err
+        );
+      });
     }
   }, [currentAudio]);
 
@@ -169,7 +179,8 @@ export default function AudioPlayer() {
     if (
       scannerEnabled &&
       !currentAudio &&
-      replayQueue.length === 0 &&
+//      replayQueue.length === 0 &&
+      playbackMode !== "replay" &&
       hasQueue
     ) {
       popLive();
@@ -300,7 +311,7 @@ export default function AudioPlayer() {
 
   return (
     <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-5">
-      <div className="flex justify-between items-start mb-4">
+       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-4 ">
         <div>
           <h2 className="text-4xl font-bold">QueueScan</h2>
 
@@ -315,8 +326,8 @@ export default function AudioPlayer() {
           <div className="text-lg font-mono text-zinc-200">{formattedTime}</div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="text-right">
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end" >
+          <div className="text-left lg:text-right">
             <div className="text-sm text-zinc-400">Logged in as</div>
 
             <div className="text-sm font-medium text-zinc-200">
