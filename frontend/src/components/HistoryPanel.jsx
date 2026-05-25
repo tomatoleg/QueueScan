@@ -11,6 +11,39 @@ export default function HistoryPanel() {
   const currentCall = useScannerStore((s) => s.currentCall);
   const enqueueReplay = useScannerStore((s) => s.enqueueReplay);
   const popReplay = useScannerStore((s) => s.popReplay);
+
+  const replayCall =
+  async (call) => {
+    try {
+      const token =
+        sessionStorage.getItem(
+          "token"
+        );
+
+      enqueueReplay([
+        {
+          url:
+            `${config.backendUrl}/call/${call.file}?token=${token}`,
+          call,
+        },
+      ]);
+
+      setTimeout(() => {
+        popReplay();
+      }, 50);
+    } catch (err) {
+      console.error(
+        "Replay failed",
+        err
+      );
+    }
+  };
+
+
+
+
+
+
   const replayTalkgroup = async (tgid) => {
     try {
       const token = sessionStorage.getItem("token");
@@ -107,7 +140,8 @@ export default function HistoryPanel() {
                   <td className="py-2">
                     <button
                       onClick={() =>
-                        replayTalkgroup(row.tgid)
+//                      replayTalkgroup(row.tgid)
+                        replayCall(row)
                       }
                       className="px-2 py-1 rounded bg-zinc-700 hover:bg-zinc-600 transition"
                     >
