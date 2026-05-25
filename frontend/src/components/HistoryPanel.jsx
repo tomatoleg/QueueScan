@@ -13,7 +13,7 @@ export default function HistoryPanel() {
   const popReplay = useScannerStore((s) => s.popReplay);
   const replayTalkgroup = async (tgid) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const replayUrl =
         `${config.replayPath}/${tgid}`;
